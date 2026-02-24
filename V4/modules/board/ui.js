@@ -143,7 +143,6 @@ window.ORB.ui = {
             
             li.addEventListener("click", () => this.switchToScene(index));
 
-            // Drag & Drop pour réorganiser les scènes
             li.addEventListener("dragstart", e => {
                 appState.draggedSceneIndex = index;
                 e.target.classList.add("dragging");
@@ -278,7 +277,6 @@ window.ORB.ui = {
             });
         }
 
-        // LECTURE ANIMATION VISUELLE (Ne lance pas de vidéo !)
         if(document.getElementById('play-animation-btn')) {
             document.getElementById('play-animation-btn').addEventListener('click', () => {
                 if(window.ORB.animation && typeof window.ORB.animation.play === 'function') {
@@ -408,48 +406,90 @@ window.ORB.ui = {
         const modal = document.getElementById('play-manager-modal');
         const btnCloseModal = document.getElementById('close-play-manager-btn');
         
-        if(btnToggleMenu && modal) btnToggleMenu.onclick = () => modal.classList.remove('hidden');
-        if(btnCloseModal && modal) btnCloseModal.onclick = () => modal.classList.add('hidden');
-
-        // 1. SAUVEGARDER BDD
         const btnSaveLib = document.getElementById('save-to-library-btn');
-        if(btnSaveLib) {
-            btnSaveLib.onclick = async () => {
-                const name = document.getElementById('play-name-input').value || 'Schéma sans nom';
-                const data = window.ORB.state.getState();
-                data.name = name;
-                
-                window.ORB.renderer.redrawCanvas();
-                const w = window.ORB.canvas.width; const h = window.ORB.canvas.height;
-                const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
-                const tCtx = tempCanvas.getContext('2d');
-                
-                const svgElement = document.getElementById('court-svg');
-                const xml = new XMLSerializer().serializeToString(svgElement);
-                const svg64 = btoa(unescape(encodeURIComponent(xml)));
-                
-                const img = new Image();
-                img.onload = async () => {
-                    tCtx.drawImage(img, 0, 0, w, h); tCtx.drawImage(window.ORB.canvas, 0, 0, w, h);
-                    tempCanvas.toBlob(async (blob) => {
-                        try {
-                            const newId = await orbDB.savePlaybook(data, blob, window.ORB.currentPlaybookId);
-                            window.ORB.currentPlaybookId = newId; 
-                            alert('✅ Schéma sauvegardé avec succès !');
-                            if(modal) modal.classList.add('hidden');
-                        } catch(e) { alert('Erreur de sauvegarde.'); }
-                    }, 'image/jpeg', 0.8);
-                };
-                img.src = 'data:image/svg+xml;base64,' + svg64;
+        const btnSaveAsNew = document.getElementById('save-as-new-btn');
+        
+        if(btnToggleMenu && modal) {
+            btnToggleMenu.onclick = () => {
+                // Adapter les boutons si un exercice est déjà chargé
+                if(window.ORB.appState.currentLoadedPlaybookId) {
+                    if(btnSaveLib) btnSaveLib.textContent = "Mettre à jour l'exercice";
+                    if(btnSaveAsNew) btnSaveAsNew.style.display = "block";
+                } else {
+                    if(btnSaveLib) btnSaveLib.textContent = "Enregistrer dans la bibliothèque";
+                    if(btnSaveAsNew) btnSaveAsNew.style.display = "none";
+                }
+                modal.classList.remove('hidden');
             };
         }
+        
+        if(btnCloseModal && modal) btnCloseModal.onclick = () => modal.classList.add('hidden');
 
-        // 2. IMPORT / EXPORT JSON
+        // --- FONCTION PRINCIPALE DE SAUVEGARDE (Mise à jour ou Copie) ---
+        const executeSave = async (isNewCopy) => {
+            const name = document.getElementById('play-name-input').value || 'Schéma sans nom';
+            const data = JSON.parse(JSON.stringify(window.ORB.playbookState));
+            data.name = name;
+            
+            // Si c'est une copie, on met l'ID à null pour forcer la création. Sinon on garde l'ID existant.
+            const targetId = isNewCopy ? null : window.ORB.appState.currentLoadedPlaybookId;
+
+            // Si c'est une copie, on veut que le nouveau fichier hérite des tags de l'ancien
+            if (isNewCopy && window.ORB.appState.currentLoadedPlaybookId) {
+                try {
+                    const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId);
+                    if (original && original.tagIds) {
+                        data.tagIds = original.tagIds;
+                    }
+                } catch(e) {}
+            }
+            
+            window.ORB.renderer.redrawCanvas();
+            const w = window.ORB.canvas.width; const h = window.ORB.canvas.height;
+            const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            const svgElement = document.getElementById('court-svg');
+            const xml = new XMLSerializer().serializeToString(svgElement);
+            const svg64 = btoa(unescape(encodeURIComponent(xml)));
+            
+            const img = new Image();
+            img.onload = async () => {
+                tCtx.drawImage(img, 0, 0, w, h); tCtx.drawImage(window.ORB.canvas, 0, 0, w, h);
+                tempCanvas.toBlob(async (blob) => {
+                    try {
+                        const newId = await orbDB.savePlaybook(data, blob, targetId);
+                        window.ORB.appState.currentLoadedPlaybookId = newId; 
+                        alert(isNewCopy ? '✅ Copie sauvegardée avec succès !' : '✅ Exercice mis à jour !');
+                        if(modal) modal.classList.add('hidden');
+                    } catch(e) { alert('Erreur de sauvegarde.'); }
+                }, 'image/jpeg', 0.8);
+            };
+            img.src = 'data:image/svg+xml;base64,' + svg64;
+        };
+
+        if(btnSaveLib) btnSaveLib.onclick = () => executeSave(false);
+        if(btnSaveAsNew) btnSaveAsNew.onclick = () => executeSave(true);
+
+
+        // --- IMPORT / EXPORT JSON ---
         const btnExportJson = document.getElementById('save-file-btn');
         if(btnExportJson) {
-            btnExportJson.onclick = () => {
-                const data = window.ORB.state.getState();
+            btnExportJson.onclick = async () => {
+                const data = JSON.parse(JSON.stringify(window.ORB.playbookState));
                 const name = document.getElementById('play-name-input').value || 'Playbook';
+                data.name = name;
+
+                // Intégrer les tags existants dans l'export JSON
+                if (window.ORB.appState.currentLoadedPlaybookId) {
+                     try {
+                        const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId);
+                        if (original && original.tagIds) {
+                            data.tagIds = original.tagIds;
+                        }
+                    } catch(e) {}
+                }
+
                 const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `${name}.json`;
@@ -467,10 +507,17 @@ window.ORB.ui = {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
-                        const data = JSON.parse(event.target.result);
-                        window.ORB.state.loadState(data); 
-                        if(data.name) document.getElementById('play-name-input').value = data.name;
-                        window.ORB.currentPlaybookId = null; 
+                        let parsedData = JSON.parse(event.target.result);
+                        if (parsedData.playbookData) parsedData = parsedData.playbookData; 
+                        
+                        window.ORB.playbookState = parsedData;
+                        window.ORB.history = [];
+                        window.ORB.redoStack = [];
+                        window.ORB.commitState();
+
+                        if(parsedData.name) document.getElementById('play-name-input').value = parsedData.name;
+                        
+                        window.ORB.appState.currentLoadedPlaybookId = null; 
                         if(modal) modal.classList.add('hidden');
                         window.ORB.renderer.redrawCanvas();
                         this.updateSceneListUI();
@@ -480,7 +527,7 @@ window.ORB.ui = {
             };
         }
 
-        // 3. EXPORT VIDÉO
+        // --- EXPORTS MÉDIAS ---
         const btnExportVideo = document.getElementById('export-video-btn');
         if(btnExportVideo) {
             btnExportVideo.onclick = () => {
@@ -493,7 +540,6 @@ window.ORB.ui = {
             };
         }
 
-        // 4. EXPORT PDF DIRECT
         const exportPdfBtn = document.getElementById('export-pdf-btn');
         if (exportPdfBtn) {
             exportPdfBtn.onclick = async () => {

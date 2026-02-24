@@ -90,21 +90,31 @@
             if (typeof orbDB !== 'undefined') await orbDB.open();
 
             // ==========================================
-            // EXPORT (BACKUP NORMAL)
+            // EXPORT (BACKUP COMPLET V4)
             // ==========================================
             document.getElementById('export-backup-btn').addEventListener('click', async () => {
                 try {
-                    const data = {
-                        playbooks: await orbDB.getAllPlaybooks(),
-                        trainingPlans: await orbDB.getAllPlans(),
-                        tags: await orbDB.getAllTags(),
-                        calendarEvents: await orbDB.getAllCalendarEvents(),
-                        players: await orbDB.getAllPlayers(),
-                        teams: await orbDB.getAllTeams()
+                    const backupData = {
+                        version: "orb_backup_v4",
+                        createdAt: new Date().toISOString(),
+                        data: {
+                            playbooks: await orbDB.getAllPlaybooks(),
+                            trainingPlans: await orbDB.getAllPlans(),
+                            tags: await orbDB.getAllTags(),
+                            calendarEvents: await orbDB.getAllCalendarEvents(),
+                            players: await orbDB.getAllPlayers(),
+                            teams: await orbDB.getAllTeams(),
+                            sheets: await orbDB.getAllSheets(),
+                            sheetTags: await orbDB.getAllSheetTags()
+                        }
                     };
-                    if(data.playbooks) data.playbooks.forEach(pb => delete pb.preview);
+                    
+                    // On supprime les aperçus images pour alléger le fichier
+                    if(backupData.data.playbooks) {
+                        backupData.data.playbooks.forEach(pb => delete pb.preview);
+                    }
 
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -119,7 +129,7 @@
             });
 
             // ==========================================
-            // IMPORT (COMPATIBILITÉ V3 INCLUSE)
+            // IMPORT (COMPATIBILITÉ V3 & V4 INCLUSE)
             // ==========================================
             document.getElementById('import-backup-btn').addEventListener('click', () => {
                 document.getElementById('import-backup-input').click();
@@ -139,9 +149,10 @@
                         let parsedData = JSON.parse(event.target.result);
                         
                         let dataToImport = {
-                            playbooks: [], trainingPlans: [], tags: [], calendarEvents: [], players: [], teams: []
+                            playbooks: [], trainingPlans: [], tags: [], calendarEvents: [], players: [], teams: [], sheets: [], sheetTags: []
                         };
 
+                        // Rétrocompatibilité et lecture du nouveau format
                         if (Array.isArray(parsedData)) {
                             dataToImport.playbooks = parsedData;
                         } else if (typeof parsedData === 'object') {
@@ -151,6 +162,8 @@
                             dataToImport.calendarEvents = parsedData.calendarEvents || (parsedData.data && parsedData.data.calendarEvents) || [];
                             dataToImport.players = parsedData.players || (parsedData.data && parsedData.data.players) || [];
                             dataToImport.teams = parsedData.teams || (parsedData.data && parsedData.data.teams) || [];
+                            dataToImport.sheets = parsedData.sheets || (parsedData.data && parsedData.data.sheets) || [];
+                            dataToImport.sheetTags = parsedData.sheetTags || (parsedData.data && parsedData.data.sheetTags) || [];
                         }
 
                         dataToImport.playbooks.forEach(pb => {
@@ -160,7 +173,8 @@
                             delete pb.preview; 
                         });
 
-                        const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'calendarEvents', 'players', 'teams'], 'readwrite');
+                        const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
+                        
                         const clearAndAdd = (storeName, items) => {
                             const store = tx.objectStore(storeName);
                             store.clear();
@@ -173,6 +187,8 @@
                         clearAndAdd('calendarEvents', dataToImport.calendarEvents);
                         clearAndAdd('players', dataToImport.players);
                         clearAndAdd('teams', dataToImport.teams);
+                        clearAndAdd('sheets', dataToImport.sheets);
+                        clearAndAdd('sheetTags', dataToImport.sheetTags);
 
                         tx.oncomplete = () => {
                             alert("✅ Restauration réussie ! L'application a intégré vos données.");

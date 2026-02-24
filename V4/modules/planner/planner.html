@@ -9,58 +9,65 @@
     <link rel="stylesheet" href="planner.css">
 </head>
 <body>
-    <header class="app-header">
-        <div class="header-content" style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%;">
-            <a href="../../index.html" class="btn-icon" title="Retour au Dashboard">
-                <svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
-            </a>
-            <h1 style="margin: 0; text-align: center; flex-grow: 1; padding-right: 40px;">ORB <span class="highlight">PLANIFICATEUR</span></h1>
-        </div>
-    </header>
 
-    <main style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
-        <div id="planner-grid"></div>
-    </main>
+    <div id="planner-main-view">
+        <header class="app-header">
+            <div class="header-content" style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%; padding: 0 20px;">
+                <a href="../../index.html" class="btn-icon" title="Retour au Dashboard">
+                    <svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
+                </a>
+                <h1 style="margin: 0; text-align: center; flex-grow: 1; padding-right: 40px;">ORB <span class="highlight">PLANIFICATEUR</span></h1>
+            </div>
+        </header>
 
-    <div id="plan-editor-modal" class="modal hidden">
-        <div id="plan-editor-content" class="modal-content large">
-            <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 id="plan-editor-title" style="margin: 0; color: var(--color-text);">Créer une Séance</h3>
-                <button id="plan-editor-close-btn" class="btn-icon danger"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
-            </header>
+        <main style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+            <div id="planner-grid"></div>
+        </main>
+    </div>
 
-            <div class="plan-editor-body">
-                <div class="plan-main-info">
-                    <input type="hidden" id="plan-editor-id" value="">
-                    <div class="form-group">
-                        <label for="plan-editor-name">Nom de la Séance</label>
-                        <input type="text" id="plan-editor-name" placeholder="Ex: Séance Défense U15">
-                    </div>
-                    <div class="form-group">
-                        <label for="plan-editor-notes">Objectifs</label>
-                        <textarea id="plan-editor-notes" rows="4" placeholder="Points clés à aborder..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Exercices Inclus</label>
-                        <ul id="plan-playbooks-list" style="list-style: none; padding: 0;">
-                            <li class="plan-editor-empty-list" style="opacity: 0.5; font-style: italic;">Piochez des exercices dans la bibliothèque de droite.</li>
-                        </ul>
-                    </div>
+    <div id="planner-editor-view" class="hidden" style="min-height: 100vh; display: flex; flex-direction: column;">
+        
+        <header class="app-header">
+            <div class="header-content" style="display: flex; justify-content: space-between; align-items: center; max-width: 1500px; margin: 0 auto; width: 100%; padding: 0 20px;">
+                <button id="plan-editor-cancel-btn" class="btn-icon" style="color: #D32F2F;" title="Annuler et fermer">
+                    <svg viewBox="0 0 24 24" style="width:28px;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+                </button>
+                <h1 id="editor-main-title" style="margin: 0;">NOUVELLE <span class="highlight">SÉANCE</span></h1>
+                <button id="plan-editor-save-btn" class="btn-primary" style="padding: 10px 24px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width:20px; fill:currentColor;"><path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"/></svg>
+                    Sauvegarder
+                </button>
+            </div>
+        </header>
+
+        <main class="editor-main-layout">
+            <div class="editor-left-panel">
+                <div class="editor-card">
+                    <h2 style="color: var(--color-primary); margin-top: 0; font-size: 1.2em;">Détails de la séance</h2>
+                    <input type="text" id="plan-editor-name" class="premium-input" placeholder="Titre de la séance (ex: Focus Défense U15...)">
+                    <textarea id="plan-editor-notes" class="premium-input" rows="3" placeholder="Objectifs, consignes générales, points d'attention..."></textarea>
                 </div>
 
-                <aside class="plan-selector-aside">
-                    <h4 style="margin-top: 0; color: var(--color-primary);">Bibliothèque</h4>
-                    <div id="plan-selector-filters" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;"></div>
-                    <input type="text" id="plan-selector-search" placeholder="Rechercher un exercice..." style="width: 100%; margin-bottom: 15px;">
-                    <div id="plan-selector-list" class="mini-grid"></div>
-                </aside>
+                <div class="editor-card" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="color: var(--color-primary); margin: 0; font-size: 1.2em;">Chronologie de l'entraînement</h2>
+                        <span style="background: rgba(191,169,141,0.2); color: var(--color-primary); padding: 4px 12px; border-radius: 20px; font-weight: bold;"><span id="exo-count">0</span> Exercices</span>
+                    </div>
+                    <ul id="plan-playbooks-list" class="premium-list">
+                        </ul>
+                </div>
             </div>
 
-            <footer style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--color-border); padding-top: 20px; margin-top: 10px;">
-                <button id="plan-editor-cancel-btn" class="danger" style="padding: 10px 20px;">Annuler</button>
-                <button id="plan-editor-save-btn" class="btn-primary" style="padding: 10px 20px;">Sauvegarder la séance</button>
-            </footer>
-        </div>
+            <div class="editor-right-panel editor-card">
+                <h2 style="color: var(--color-primary); margin-top: 0; font-size: 1.2em; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 20px;">Bibliothèque</h2>
+                
+                <div id="plan-selector-filters" class="tag-filters"></div>
+                
+                <input type="text" id="plan-selector-search" class="premium-input search-input" placeholder="🔍 Rechercher un exercice à ajouter...">
+                <div id="plan-selector-list" class="premium-mini-grid">
+                    </div>
+            </div>
+        </main>
     </div>
 
     <script src="../../core/db.js"></script>

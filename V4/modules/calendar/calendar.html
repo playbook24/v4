@@ -50,24 +50,32 @@
                  
                  <div class="form-group">
                     <label>Équipe concernée</label>
-                    <select id="event-team-select"></select>
+                    <select id="event-team-select" style="background:var(--color-background); color:var(--color-text); border:1px solid var(--color-border); padding:10px; width:100%; border-radius:6px;"></select>
                  </div>
 
                  <div class="form-group">
                     <label>Titre de la séance</label>
-                    <input type="text" id="event-title" placeholder="Ex: Entraînement U15">
+                    <input type="text" id="event-title" placeholder="Ex: Entraînement U15" style="background:var(--color-background); color:var(--color-text); border:1px solid var(--color-border); padding:10px; width:100%; border-radius:6px;">
+                 </div>
+
+                 <div id="event-repeat-container" class="form-group" style="display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; border: 1px dashed var(--color-primary); margin-bottom: 15px;">
+                     <label style="margin:0; flex-grow:1; display:flex; align-items:center; gap:10px; cursor:pointer;">
+                         <input type="checkbox" id="event-repeat-checkbox" style="width:18px; height:18px; accent-color:var(--color-primary);">
+                         Répéter toutes les semaines jusqu'au :
+                     </label>
+                     <input type="date" id="event-repeat-until" style="background:var(--color-background); color:var(--color-text); border:1px solid var(--color-border); padding:8px; border-radius:6px;" disabled>
                  </div>
 
                  <div class="form-group">
                     <label>Plan associé</label>
                     <div id="event-plan-empty">
                         <p style="font-style:italic; opacity:0.5; margin: 0 0 10px 0;">Aucune séance liée.</p>
-                        <button id="btn-open-plan-picker" class="btn-primary" style="width:100%">Lier un Planificateur</button>
+                        <button id="btn-open-plan-picker" class="btn-primary" style="width:100%">Lier un entraînement</button>
                     </div>
                     <div id="event-plan-selected" class="hidden" style="border:1px solid var(--color-border); padding:15px; border-radius:8px; background: rgba(255,255,255,0.02);">
                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                              <strong><span id="snapshot-plan-name" style="color: var(--color-primary);">Nom du plan</span></strong>
-                             <button id="btn-remove-snapshot" class="danger">Détacher</button>
+                             <button id="btn-remove-snapshot" style="background:transparent; border:none; color:var(--color-primary); cursor:pointer; text-decoration:underline;">Détacher</button>
                          </div>
                          <button id="btn-view-snapshot-plan" class="btn-primary" style="width: 100%;">Voir le détail du plan</button>
                     </div>
@@ -81,12 +89,12 @@
 
                  <div class="form-group">
                      <label>Notes / Feedback (Post-Entraînement)</label>
-                     <textarea id="event-notes" placeholder="Comment s'est passée la séance ?" rows="3"></textarea>
+                     <textarea id="event-notes" placeholder="Comment s'est passée la séance ?" rows="3" style="background:var(--color-background); color:var(--color-text); border:1px solid var(--color-border); padding:10px; width:100%; border-radius:6px;"></textarea>
                  </div>
              </div>
 
              <footer style="display: flex; justify-content: space-between; border-top: 1px solid var(--color-border); padding-top: 20px; margin-top: 10px;">
-                 <button id="btn-delete-event" class="danger">Supprimer</button>
+                 <button id="btn-delete-event" style="background:transparent; border:1px solid var(--color-primary); color:var(--color-primary); padding:10px 20px; border-radius:6px; cursor:pointer;">Supprimer</button>
                  <button id="btn-save-event" class="btn-primary">Enregistrer</button>
              </footer>
          </div>
@@ -95,10 +103,10 @@
     <div id="attendance-modal" class="modal hidden">
         <div class="modal-content">
             <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 style="margin: 0;">Appel des joueurs</h3>
+                <h3 style="margin: 0; color: var(--color-primary);">Appel des joueurs</h3>
                 <button id="attendance-close-btn" class="btn-icon danger"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
             </header>
-            <div id="attendance-list" style="max-height: 50vh; overflow-y: auto;"></div>
+            <div id="attendance-list" style="max-height: 50vh; overflow-y: auto; padding-right:10px;"></div>
             <footer style="text-align: right; border-top: 1px solid var(--color-border); padding-top: 15px; margin-top: 15px;">
                 <button id="btn-save-attendance" class="btn-primary" style="width: 100%;">Valider l'appel</button>
             </footer>
@@ -108,7 +116,7 @@
     <div id="plan-picker-modal" class="modal hidden">
         <div class="modal-content">
             <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 15px;">
-                <h3 style="margin: 0;">Choisir un plan</h3>
+                <h3 style="margin: 0; color: var(--color-primary);">Choisir un plan</h3>
                 <button id="plan-picker-close-btn" class="btn-icon danger"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
             </header>
             <div id="plan-picker-list" style="max-height: 60vh; overflow-y: auto;"></div>
@@ -121,7 +129,7 @@
                 <h3 id="viewer-title" style="margin: 0; color: var(--color-primary);">Détails du Plan</h3>
                 <button id="viewer-close-btn" class="btn-icon danger"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
             </header>
-            <div id="viewer-list" style="overflow-y: auto; display: flex; flex-direction: column; gap: 20px;"></div>
+            <div id="viewer-list" style="overflow-y: auto; display: flex; flex-direction: column; gap: 15px; max-height: 60vh;"></div>
         </div>
     </div>
 

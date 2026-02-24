@@ -13,8 +13,54 @@ window.ORB = {
         COLORS: { primary: '#BFA98D', secondary: '#212121', crabPrimary: '#72243D', crabSecondary: '#F9AB00' }
     },
 
+    // --- NOUVEAUTÉ V4 : Normalisation pour accepter les backups V3 ---
+    normalizePlaybook: function(importedData) {
+        if (!importedData) return null;
+        
+        // Si c'est une V3, on met à jour la structure
+        const normalizedData = {
+            name: importedData.name || "Playbook Importé",
+            version: 4, // On force la version V4
+            animationSettings: importedData.animationSettings || { speed: 50, ratio: 0.3 },
+            scenes: importedData.scenes || [],
+            tagIds: importedData.tagIds || []
+        };
+
+        // Sécurité : au moins une scène
+        if (normalizedData.scenes.length === 0) {
+            normalizedData.scenes.push({ name: "Scène 1", elements: [], durationOverride: null, comments: '' });
+        }
+
+        // Nettoyage et sécurisation de toutes les scènes/éléments
+        normalizedData.scenes.forEach((scene, index) => {
+            if (!scene.name) scene.name = `Scène ${index + 1}`;
+            if (!scene.elements) scene.elements = [];
+            if (typeof scene.comments === 'undefined') scene.comments = '';
+            
+            scene.elements.forEach(el => {
+                // Compatibilité V3 -> V4 (ex: rotations, couleurs)
+                if ((el.type === 'defender' || el.type === 'player') && typeof el.rotation === 'undefined') el.rotation = 0;
+                if (el.type === 'zone' && !el.color) el.color = '#FFEB3B';
+                if (!el.id) el.id = Date.now() + Math.random(); // Assure un ID unique
+            });
+        });
+
+        return normalizedData;
+    },
+
+    // Remplace complètement le state actuel par un nouveau (pour l'importation)
+    loadState: function(importedData) {
+        this.playbookState = this.normalizePlaybook(importedData);
+        this.playbookState.activeSceneIndex = 0;
+        this.history = [];
+        this.redoStack = [];
+        this.isRestoringState = false;
+        this.commitState();
+    },
+
     playbookState: {
         name: "Nouveau Playbook",
+        version: 4,
         scenes: [{ name: "Scène 1", elements: [], comments: '', durationOverride: null }],
         activeSceneIndex: 0,
         animationSettings: { speed: 50, ratio: 0.3 }
@@ -30,7 +76,9 @@ window.ORB = {
         isMouseDown: false,
         currentPath: [],
         playerCounter: 1,
-        defenderCounter: 1
+        defenderCounter: 1,
+        startDragPos: {x:0, y:0},
+        lastMousePos: {x:0, y:0}
     },
 
     animationState: { isPlaying: false, isFinished: false, startTime: 0, elapsedOffset: 0, storyboard: [], view: 'full', activeHalf: 'left' },
@@ -38,7 +86,6 @@ window.ORB = {
     history: [], redoStack: [], isRestoringState: false,
     canvas: null, ctx: null, animCanvas: null, animCtx: null,
     
-    // LA FONCTION QUI EMPÊCHAIT TOUT DE MARCHER :
     commitState: function() {
         if (this.isRestoringState) return;
         const stateCopy = JSON.parse(JSON.stringify(this.playbookState));
@@ -57,8 +104,8 @@ window.ORB = {
         this.redoStack.push(currentState);
         const prevState = this.history[this.history.length - 1];
         this.playbookState = JSON.parse(JSON.stringify(prevState));
-        if (this.ui) {
-            if (typeof this.ui.switchToScene === 'function') this.ui.switchToScene(this.playbookState.activeSceneIndex, true);
+        if (this.ui && typeof this.ui.switchToScene === 'function') {
+            this.ui.switchToScene(this.playbookState.activeSceneIndex, true);
         }
         this.isRestoringState = false;
     },
@@ -69,8 +116,8 @@ window.ORB = {
         const nextState = this.redoStack.pop();
         this.history.push(nextState);
         this.playbookState = JSON.parse(JSON.stringify(nextState));
-        if (this.ui) {
-            if (typeof this.ui.switchToScene === 'function') this.ui.switchToScene(this.playbookState.activeSceneIndex, true);
+        if (this.ui && typeof this.ui.switchToScene === 'function') {
+            this.ui.switchToScene(this.playbookState.activeSceneIndex, true);
         }
         this.isRestoringState = false;
     }

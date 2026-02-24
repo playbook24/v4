@@ -37,8 +37,9 @@ window.ORB.interactions = {
             clientY = e.touches[0].clientY;
         }
 
-        if (window.ORB_UTILS && window.ORB_UTILS.getLogicalCoords) {
-            return window.ORB_UTILS.getLogicalCoords({ clientX, clientY }, rect, viewWidth);
+        const utils = window.ORB_UTILS || window.ORB.utils;
+        if (utils && utils.getLogicalCoords) {
+            return utils.getLogicalCoords({ clientX, clientY }, rect, viewWidth);
         } else {
             return {
                 x: ((clientX - rect.left) / rect.width) * viewWidth,
@@ -273,6 +274,8 @@ window.ORB.interactions = {
         const pathTools = ['arrow', 'pass', 'dribble', 'screen', 'pencil'];
         const selectionOrder = [['text'], ['ball'], ['player', 'defender'], ['cone', 'hoop', 'basket'], pathTools, ['zone']];
         
+        const utils = window.ORB_UTILS || window.ORB.utils;
+
         for (const types of selectionOrder) {
             for (let i = elements.length - 1; i >= 0; i--) {
                 const el = elements[i];
@@ -281,10 +284,9 @@ window.ORB.interactions = {
                 
                 if (el.type === 'zone') {
                     if (logicalPoint.x >= el.x && logicalPoint.x <= el.x + el.width && logicalPoint.y >= el.y && logicalPoint.y <= el.y + el.height) return el;
-                } else if (pathTools.includes(el.type)) {
+                } else if (pathTools.includes(el.type) && utils && utils.getDistanceToSegment) {
                     for (let j = 0; j < el.points.length - 1; j++) {
-                        let getDistFn = window.ORB_UTILS ? window.ORB_UTILS.getDistanceToSegment : window.ORB.utils.getDistanceToSegment;
-                        if (getDistFn(logicalPoint, el.points[j], el.points[j + 1]) < 8) return el;
+                        if (utils.getDistanceToSegment(logicalPoint, el.points[j], el.points[j + 1]) < 8) return el;
                     }
                 } else {
                     if (Math.hypot(logicalPoint.x - el.x, logicalPoint.y - el.y) < CLICK_RADIUS) return el;

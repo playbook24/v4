@@ -20,11 +20,15 @@
 
     <main style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
         <div class="section-container" style="border-left: 4px solid var(--color-primary);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h3 style="margin: 0; border: none; padding: 0;">Équipe active</h3>
-                <button id="btn-create-team" class="btn-primary">Nouvelle équipe</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-edit-team" class="btn-primary" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 15px;">Modifier</button>
+                    <button id="btn-delete-team" class="danger" style="padding: 8px 15px; border-radius: 6px;">Supprimer</button>
+                    <button id="btn-create-team" class="btn-primary" style="padding: 8px 15px;">Nouvelle équipe</button>
+                </div>
             </div>
-            <select id="roster-team-select" style="width: 100%; font-size: 1.1em; font-weight: bold;"></select>
+            <select id="roster-team-select" style="width: 100%; font-size: 1.1em; font-weight: bold; background: var(--color-background); color: var(--color-text); border: 1px solid var(--color-border); padding: 12px; border-radius: 6px;"></select>
         </div>
 
         <div class="section-container">
@@ -43,7 +47,6 @@
     <script src="../../core/db.js"></script>
     <script src="roster.js"></script>
     <script>
-        // Maintien du thème global
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
             if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');

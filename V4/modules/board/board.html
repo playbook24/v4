@@ -27,7 +27,8 @@
             </div>
             
             <h1 style="margin: 0; text-align: center;">ORB <span class="highlight">ÉDITEUR</span></h1>
-            <div style="width: 150px;"></div> </div>
+            <div style="width: 150px;"></div> 
+        </div>
     </header>
 
     <div id="play-manager-modal" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9000; display:flex; align-items:center; justify-content:center;">
@@ -42,7 +43,8 @@
                 <input type="text" id="play-name-input" placeholder="Ex: Système Cornes..." style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-background); color: var(--color-text);">
             </div>
             
-            <button id="save-to-library-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1em; margin-bottom:25px;">Enregistrer dans la Bibliothèque</button>
+            <button id="save-to-library-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1em; margin-bottom:10px;">Enregistrer / Mettre à jour</button>
+            <button id="save-as-new-btn" class="btn-primary" style="display:none; width: 100%; padding: 12px; font-size: 1em; margin-bottom:25px; background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary);">Créer une copie (Nouveau)</button>
 
             <div style="border-top: 1px solid var(--color-border); padding-top: 15px; margin-bottom: 20px;">
                 <label style="font-size: 0.9em; opacity: 0.7; display:block; margin-bottom:10px;">Fichiers Bruts (.json)</label>
@@ -189,7 +191,11 @@
                         <svg id="court-svg" class="court" viewBox="0 0 280 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
                             <rect x="0" y="0" width="280" height="150" fill="#BFA98D"/>
                             <g stroke="#212121" stroke-width="0.6" fill="none"><rect x="0" y="0" width="280" height="150"/><line x1="140" y1="0" x2="140" y2="150"/><rect x="0" y="50.5" width="58" height="49" /><path d="M 58 50.5 A 18 18 0 0 1 58 99.5" /><path d="M 0 6 L 29.1 6 A 67.5 67.5 0 0 1 29.1 144 L 0 144" /><rect x="222" y="50.5" width="58" height="49" /><path d="M 222 50.5 A 18 18 0 0 0 222 99.5" /><path d="M 280 6 L 250.9 6 A 67.5 67.5 0 0 0 250.9 144 L 280 144" /></g>
-                            <g class="center-court-logo"><circle cx="140" cy="75" r="18" fill="#BFA98D" /><circle cx="140" cy="75" r="18" fill="none" stroke="#212121" stroke-width="0.6"/><text x="140" y="75" font-family="Anton, sans-serif" font-size="14" fill="#212121" text-anchor="middle" dominant-baseline="middle">ORB</text></g>
+                            <g class="center-court-logo">
+                            <circle cx="140" cy="75" r="18" fill="#BFA98D" />
+                            <circle cx="140" cy="75" r="18" fill="none" stroke="#212121" stroke-width="0.6"/>
+                            <text x="140" y="76" font-family="Impact, 'Arial Black', sans-serif" font-size="15" fill="#212121" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.5">ORB</text>
+                            </g>
                             <g stroke="#212121" fill="none"><g transform="translate(15.75, 75)"><line x1="-3.75" y1="-9" x2="-3.75" y2="9" stroke-width="0.8"/><circle cx="0" cy="0" r="2.25" stroke-width="0.5"/><path d="M 0 -12.5 A 12.5 12.5 0 0 1 0 12.5" stroke-width="0.6"/></g><g transform="translate(264.25, 75)"><line x1="3.75" y1="-9" x2="3.75" y2="9" stroke-width="0.8"/><circle cx="0" cy="0" r="2.25" stroke-width="0.5"/><path d="M 0 -12.5 A 12.5 12.5 0 0 0 0 12.5" stroke-width="0.6"/></g></g>
                         </svg>
                     </div>

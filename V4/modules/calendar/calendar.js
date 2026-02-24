@@ -1,6 +1,6 @@
 /**
  * modules/calendar/calendar.js
- * V4 - Calendrier connecté au Planificateur et à l'Effectif (L'Appel)
+ * V4 - Calendrier avec option "Aucune équipe" et icônes Noires.
  */
 const CalendarModule = {
     currentDate: new Date(),
@@ -20,41 +20,49 @@ const CalendarModule = {
         this.modal = document.getElementById('event-editor-modal');
         this.teamSelect = document.getElementById('event-team-select');
         
-        // Éléments du lien Planificateur
         this.planPickerModal = document.getElementById('plan-picker-modal');
         this.planPickerList = document.getElementById('plan-picker-list');
         this.eventPlanEmpty = document.getElementById('event-plan-empty');
         this.eventPlanSelected = document.getElementById('event-plan-selected');
         
-        // Éléments de l'Appel (Présence)
+        this.viewerModal = document.getElementById('snapshot-viewer-modal');
+        this.viewerList = document.getElementById('viewer-list');
+        this.viewerTitle = document.getElementById('viewer-title');
+        
         this.attendanceModal = document.getElementById('attendance-modal');
         this.attendanceList = document.getElementById('attendance-list');
         this.attendanceSummary = document.getElementById('attendance-summary');
     },
 
     bindEvents() {
-        // Navigation Mois
         document.getElementById('cal-prev-btn').onclick = () => { this.currentDate.setMonth(this.currentDate.getMonth() - 1); this.render(); };
         document.getElementById('cal-next-btn').onclick = () => { this.currentDate.setMonth(this.currentDate.getMonth() + 1); this.render(); };
         document.getElementById('cal-today-btn').onclick = () => { this.currentDate = new Date(); this.render(); };
         
-        // Modale Principal
         document.getElementById('event-modal-close-btn').onclick = () => this.modal.classList.add('hidden');
         document.getElementById('btn-save-event').onclick = () => this.saveEvent();
         document.getElementById('btn-delete-event').onclick = () => this.deleteEvent();
 
-        // Lien Planificateur
         document.getElementById('btn-open-plan-picker').onclick = () => this.openPlanPicker();
         document.getElementById('plan-picker-close-btn').onclick = () => this.planPickerModal.classList.add('hidden');
         document.getElementById('btn-remove-snapshot').onclick = () => {
-            this.currentEvent.planId = null;
+            this.currentEvent.planSnapshot = null;
             this.updatePlanUI();
         };
 
-        // Présences (L'Appel)
+        document.getElementById('btn-view-snapshot-plan').onclick = () => this.viewPlanDetails();
+        document.getElementById('viewer-close-btn').onclick = () => this.viewerModal.classList.add('hidden');
+
         document.getElementById('btn-manage-attendance').onclick = () => this.openAttendanceModal();
         document.getElementById('attendance-close-btn').onclick = () => this.attendanceModal.classList.add('hidden');
         document.getElementById('btn-save-attendance').onclick = () => this.saveAttendance();
+
+        const repeatCheckbox = document.getElementById('event-repeat-checkbox');
+        if (repeatCheckbox) {
+            repeatCheckbox.onchange = (e) => {
+                document.getElementById('event-repeat-until').disabled = !e.target.checked;
+            };
+        }
     },
 
     async render() {
@@ -63,13 +71,11 @@ const CalendarModule = {
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        // Format du mois avec Majuscule
         let monthStr = this.currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         this.monthDisplay.textContent = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
         
         this.grid.innerHTML = '';
 
-        // En-têtes (L, M, M, J, V, S, D)
         const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
         days.forEach(d => {
             const h = document.createElement('div');
@@ -77,7 +83,6 @@ const CalendarModule = {
             this.grid.appendChild(h);
         });
 
-        // Décalage pour commencer au Lundi (getDay() de dimanche = 0)
         let emptyDays = firstDay === 0 ? 6 : firstDay - 1;
         for (let i = 0; i < emptyDays; i++) {
             this.grid.appendChild(document.createElement('div'));
@@ -90,15 +95,30 @@ const CalendarModule = {
             const dayCell = document.createElement('div');
             dayCell.className = 'calendar-day';
             
-            // Surligner la date d'aujourd'hui
             const isToday = new Date().toISOString().split('T')[0] === dateStr;
             dayCell.innerHTML = `<div class="day-number" style="${isToday ? 'color:var(--color-primary); font-size:1.2em;' : ''}">${d}</div>`;
             
-            // Afficher les événements de ce jour
             events.filter(e => e.date === dateStr).forEach(e => {
                 const chip = document.createElement('div');
                 chip.className = 'event-chip';
-                chip.textContent = e.title || 'Séance';
+                chip.style.display = 'flex';
+                chip.style.justifyContent = 'space-between';
+                chip.style.alignItems = 'center';
+                
+                const hasPlan = !!(e.planSnapshot);
+                const hasAttendance = e.attendance && Object.keys(e.attendance).length > 0;
+                
+                // CORRECTION : Icônes NOIRES pour contraster avec le bandeau or (#000000)
+                let iconsHtml = '';
+                if (hasPlan) iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Entraînement lié"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"/></svg>`;
+                if (hasAttendance) iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Appel effectué"><path d="M21.1,12.5L22.5,13.91L15.97,20.5L12.5,17L13.9,15.59L15.97,17.67L21.1,12.5M10,17L13,20H3V18C3,15.79 6.58,14 10.5,14C10.89,14 11.27,14 11.64,14.07L10.59,15.12C10.56,15.11 10.53,15.11 10.5,15.11C8.25,15.11 5.37,16.05 4.88,17H10M10.5,12C8.57,12 6.69,10.43 6.69,8.5C6.69,6.57 8.57,5 10.5,5C12.43,5 14.31,6.57 14.31,8.5C14.31,10.43 12.43,12 10.5,12M10.5,10.11C11.5,10.11 12.41,9.25 12.41,8.5C12.41,7.75 11.5,6.89 10.5,6.89C9.5,6.89 8.59,7.75 8.59,8.5C8.59,9.25 9.5,10.11 10.5,10.11Z"/></svg>`;
+
+                chip.innerHTML = `
+                    <span style="flex: 1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.title || 'Séance'}</span>
+                    <div style="flex: 0 0 auto; display:flex; align-items:center; gap:5px; margin-left: 5px;">${iconsHtml}</div>
+                `;
+                
+                chip.onclick = (event) => { event.stopPropagation(); this.openEditor(dateStr); };
                 dayCell.appendChild(chip);
             });
 
@@ -112,50 +132,55 @@ const CalendarModule = {
         const formattedDate = new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         document.getElementById('event-date-display').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
         
-        // Charger les équipes dans la liste déroulante
         const teams = await orbDB.getAllTeams();
-        this.teamSelect.innerHTML = teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
         
-        // Vérifier si un événement existe déjà pour ce jour
+        // NOUVEAU : Option par défaut "Aucune équipe"
+        let selectHtml = `<option value="">-- Aucune équipe --</option>`;
+        selectHtml += teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        this.teamSelect.innerHTML = selectHtml;
+        
         const events = await orbDB.getAllCalendarEvents();
         const existingEvent = events.find(e => e.date === dateStr);
+
+        const repeatContainer = document.getElementById('event-repeat-container');
+        const repeatCheckbox = document.getElementById('event-repeat-checkbox');
+        const repeatInput = document.getElementById('event-repeat-until');
 
         if (existingEvent) {
             this.currentEvent = { ...existingEvent };
             if(!this.currentEvent.attendance) this.currentEvent.attendance = {};
+            if (repeatContainer) repeatContainer.style.display = 'none';
         } else {
-            // Nouvel événement
             this.currentEvent = {
-                id: null, date: dateStr, title: '', teamId: teams.length > 0 ? teams[0].id : null, notes: '', planId: null, attendance: {}
+                id: null, date: dateStr, title: '', teamId: null, notes: '', planSnapshot: null, attendance: {}
             };
+            if (repeatContainer) {
+                repeatContainer.style.display = 'flex';
+                repeatCheckbox.checked = false;
+                repeatInput.disabled = true;
+                repeatInput.value = '';
+            }
         }
 
-        // Remplir les champs
         document.getElementById('event-title').value = this.currentEvent.title;
         document.getElementById('event-notes').value = this.currentEvent.notes || '';
-        if(this.currentEvent.teamId) this.teamSelect.value = this.currentEvent.teamId;
+        this.teamSelect.value = this.currentEvent.teamId || ""; // Sélectionne "Aucune" si c'est null
 
-        // Mettre à jour l'interface
         await this.updatePlanUI();
         this.updateAttendanceSummary();
 
         this.modal.classList.remove('hidden');
     },
 
-    // --- LOGIQUE PLANIFICATEUR ---
     async updatePlanUI() {
-        if (this.currentEvent.planId) {
-            const plan = await orbDB.getPlan(this.currentEvent.planId);
-            if (plan) {
-                document.getElementById('snapshot-plan-name').textContent = plan.name;
-                this.eventPlanEmpty.classList.add('hidden');
-                this.eventPlanSelected.classList.remove('hidden');
-                return;
-            }
+        if (this.currentEvent.planSnapshot) {
+            document.getElementById('snapshot-plan-name').textContent = this.currentEvent.planSnapshot.name || "Séance liée";
+            this.eventPlanEmpty.classList.add('hidden');
+            this.eventPlanSelected.classList.remove('hidden');
+        } else {
+            this.eventPlanEmpty.classList.remove('hidden');
+            this.eventPlanSelected.classList.add('hidden');
         }
-        // Si aucun plan ou plan supprimé
-        this.eventPlanEmpty.classList.remove('hidden');
-        this.eventPlanSelected.classList.add('hidden');
     },
 
     async openPlanPicker() {
@@ -170,10 +195,23 @@ const CalendarModule = {
                 div.innerHTML = `<h4 style="margin:0; color:var(--color-primary);">${plan.name}</h4><p style="margin:5px 0 0 0; font-size:0.85em; opacity:0.7;">${plan.playbookIds.length} exercices</p>`;
                 div.onmouseover = () => div.style.borderColor = "var(--color-primary)";
                 div.onmouseout = () => div.style.borderColor = "var(--color-border)";
-                div.onclick = () => {
-                    this.currentEvent.planId = plan.id;
-                    this.updatePlanUI();
-                    this.planPickerModal.classList.add('hidden');
+                
+                div.onclick = async () => {
+                    const fullPlan = await orbDB.getPlan(plan.id);
+                    if (fullPlan) {
+                        const snapshot = {
+                            name: fullPlan.name,
+                            notes: fullPlan.notes,
+                            playbooks: []
+                        };
+                        for (let pbId of fullPlan.playbookIds) {
+                            const pb = await orbDB.getPlaybook(pbId);
+                            if (pb) snapshot.playbooks.push(pb);
+                        }
+                        this.currentEvent.planSnapshot = snapshot;
+                        this.updatePlanUI();
+                        this.planPickerModal.classList.add('hidden');
+                    }
                 };
                 this.planPickerList.appendChild(div);
             });
@@ -181,12 +219,40 @@ const CalendarModule = {
         this.planPickerModal.classList.remove('hidden');
     },
 
-    // --- LOGIQUE ATTENDANCE (L'APPEL) ---
+    async viewPlanDetails() {
+        if (!this.currentEvent.planSnapshot) return;
+        const snap = this.currentEvent.planSnapshot;
+
+        this.viewerTitle.textContent = `Détails : ${snap.name}`;
+        this.viewerList.innerHTML = '';
+
+        if (!snap.playbooks || snap.playbooks.length === 0) {
+            this.viewerList.innerHTML = '<p style="opacity:0.6; text-align:center;">Aucun exercice dans cet entraînement.</p>';
+        } else {
+            snap.playbooks.forEach((pb, i) => {
+                let previewUrl = '';
+                if (pb.preview instanceof Blob) {
+                    try { previewUrl = URL.createObjectURL(pb.preview); } catch(e){}
+                }
+
+                const div = document.createElement('div');
+                div.style.cssText = "display: flex; align-items: center; gap: 15px; padding: 10px; border: 1px solid var(--color-border); border-radius: 8px; background: rgba(255,255,255,0.02);";
+                div.innerHTML = `
+                    <div style="font-weight: 900; color: var(--color-primary); font-size: 1.2em; min-width: 25px;">${i + 1}.</div>
+                    ${previewUrl ? `<img src="${previewUrl}" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--color-border);">` : `<div style="width: 100px; height: 60px; background: var(--color-background); border-radius: 4px; border: 1px solid var(--color-border);"></div>`}
+                    <div style="font-weight: bold; font-size: 1.1em; color: var(--color-text);">${pb.name || 'Sans nom'}</div>
+                `;
+                this.viewerList.appendChild(div);
+            });
+        }
+        this.viewerModal.classList.remove('hidden');
+    },
+
     async openAttendanceModal() {
         const teamId = parseInt(this.teamSelect.value, 10);
-        if (isNaN(teamId)) return alert("Veuillez sélectionner une équipe d'abord.");
+        // NOUVEAU : Blocage si aucune équipe sélectionnée
+        if (isNaN(teamId) || !teamId) return alert("Veuillez d'abord sélectionner une équipe dans la liste déroulante pour pouvoir faire l'appel.");
         
-        // Met à jour l'équipe de l'événement si elle a changé dans le select
         this.currentEvent.teamId = teamId; 
 
         const players = await orbDB.getAllPlayers();
@@ -198,17 +264,18 @@ const CalendarModule = {
             this.attendanceList.innerHTML = '<p style="text-align:center; opacity:0.6;">Aucun joueur dans cette équipe. Ajoutez-en via le menu Effectif.</p>';
         } else {
             teamPlayers.forEach(p => {
-                const status = this.currentEvent.attendance[p.id] || 'present'; // Présent par défaut
+                const status = this.currentEvent.attendance[p.id] || 'absent'; 
+                const isChecked = status === 'present' ? 'checked' : '';
                 
                 const div = document.createElement('div');
                 div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--color-border);';
+                
                 div.innerHTML = `
-                    <span style="font-weight: bold; font-size: 1.1em;">${p.lastName.toUpperCase()} ${p.firstName}</span>
-                    <div style="display:flex; gap:15px; background:var(--color-background); padding:5px 10px; border-radius:6px;">
-                        <label style="cursor:pointer; color:#4caf50;"><input type="radio" name="att_${p.id}" value="present" ${status==='present'?'checked':''}> Présent</label>
-                        <label style="cursor:pointer; color:#f44336;"><input type="radio" name="att_${p.id}" value="absent" ${status==='absent'?'checked':''}> Absent</label>
-                        <label style="cursor:pointer; color:#ff9800;"><input type="radio" name="att_${p.id}" value="injured" ${status==='injured'?'checked':''}> Blessé</label>
-                    </div>
+                    <span style="font-weight: bold; font-size: 1.1em; color: var(--color-text);">${p.lastName.toUpperCase()} ${p.firstName}</span>
+                    <label style="cursor:pointer; display:flex; align-items:center; gap:10px; font-weight:bold; color:var(--color-primary); background:rgba(255,255,255,0.05); padding:8px 15px; border-radius:8px; border:1px solid var(--color-border);">
+                        <input type="checkbox" class="att-checkbox" data-id="${p.id}" style="width:20px; height:20px; accent-color:var(--color-primary);" ${isChecked}>
+                        Présent
+                    </label>
                 `;
                 this.attendanceList.appendChild(div);
             });
@@ -217,16 +284,11 @@ const CalendarModule = {
     },
 
     saveAttendance() {
-        const playersDivs = Array.from(this.attendanceList.querySelectorAll('div[style*="justify-content: space-between"]'));
+        const checkboxes = this.attendanceList.querySelectorAll('.att-checkbox');
         const newAttendance = {};
         
-        playersDivs.forEach(div => {
-            const radios = div.querySelectorAll('input[type="radio"]');
-            if(radios.length > 0) {
-                const idStr = radios[0].name.split('_')[1];
-                const checked = Array.from(radios).find(r => r.checked);
-                if(checked) newAttendance[idStr] = checked.value;
-            }
+        checkboxes.forEach(chk => {
+            newAttendance[chk.dataset.id] = chk.checked ? 'present' : 'absent';
         });
         
         this.currentEvent.attendance = newAttendance;
@@ -243,21 +305,54 @@ const CalendarModule = {
         }
         const present = Object.values(att).filter(v => v === 'present').length;
         const absent = Object.values(att).filter(v => v === 'absent').length;
-        const injured = Object.values(att).filter(v => v === 'injured').length;
         
-        this.attendanceSummary.innerHTML = `<span style="color:#4caf50">${present} Présent(s)</span> | <span style="color:#f44336">${absent} Absent(s)</span> | <span style="color:#ff9800">${injured} Blessé(s)</span>`;
+        this.attendanceSummary.innerHTML = `<span style="color:var(--color-primary); font-weight:bold;">${present} Présent(s)</span> | <span style="opacity:0.6">${absent} Absent(s)</span>`;
     },
 
     async saveEvent() {
         this.currentEvent.title = document.getElementById('event-title').value;
-        this.currentEvent.teamId = parseInt(this.teamSelect.value, 10);
+        const selectedVal = this.teamSelect.value;
+        this.currentEvent.teamId = selectedVal ? parseInt(selectedVal, 10) : null;
         this.currentEvent.notes = document.getElementById('event-notes').value;
         
         if (!this.currentEvent.title) return alert("Le titre est obligatoire.");
 
-        await orbDB.saveCalendarEvent(this.currentEvent);
-        this.modal.classList.add('hidden');
-        this.render();
+        const repeatContainer = document.getElementById('event-repeat-container');
+        const repeatCheckbox = document.getElementById('event-repeat-checkbox');
+        const repeatUntilValue = document.getElementById('event-repeat-until').value;
+
+        try {
+            await orbDB.saveCalendarEvent(this.currentEvent);
+
+            if (repeatContainer && repeatContainer.style.display !== 'none' && repeatCheckbox && repeatCheckbox.checked && repeatUntilValue) {
+                const endDate = new Date(repeatUntilValue);
+                let nextDate = new Date(this.currentEvent.date);
+                nextDate.setDate(nextDate.getDate() + 7); 
+
+                while (nextDate <= endDate) {
+                    const nextDateStr = nextDate.toISOString().split('T')[0];
+                    const clonedEvent = {
+                        ...this.currentEvent,
+                        id: null, 
+                        date: nextDateStr,
+                        attendance: {} 
+                    };
+                    
+                    if (this.currentEvent.planSnapshot) {
+                        clonedEvent.planSnapshot = JSON.parse(JSON.stringify(this.currentEvent.planSnapshot));
+                    }
+                    
+                    await orbDB.saveCalendarEvent(clonedEvent);
+                    nextDate.setDate(nextDate.getDate() + 7);
+                }
+            }
+
+            this.modal.classList.add('hidden');
+            this.render();
+        } catch (error) {
+            console.error("Erreur de sauvegarde:", error);
+            alert("Erreur lors de la sauvegarde de l'événement.");
+        }
     },
 
     async deleteEvent() {

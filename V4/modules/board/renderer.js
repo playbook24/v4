@@ -74,10 +74,11 @@ window.ORB.renderer = {
         
         let hasBall = false;
         if (animParams.isAnimating) {
+            const passRatio = window.ORB.CONSTANTS.PASS_RATIO || 0.5;
             if(animParams.passData && animParams.passData.length > 0) {
                 hasBall = animParams.passData.some(pass => 
-                    (pass.passerId === options.id && animParams.rawProgress < window.ORB.CONSTANTS.PASS_RATIO) ||
-                    (pass.receiverId === options.id && animParams.rawProgress >= window.ORB.CONSTANTS.PASS_RATIO)
+                    (pass.passerId === options.id && animParams.rawProgress < passRatio) ||
+                    (pass.receiverId === options.id && animParams.rawProgress >= passRatio)
                 );
             } else {
                  const currentScene = window.ORB.playbookState.scenes[animParams.sceneIndex];
