@@ -6,7 +6,6 @@
     <title>ORB Board - Dashboard</title>
     
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     
     <link rel="stylesheet" href="style.css">
@@ -76,13 +75,19 @@
             <span>Aide & Prise en main</span>
         </a>
         
-        
     </main>
 
     <script src="core/db.js"></script>
     
     <script>
-        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Applique les thèmes
+            if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+            if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
+
+            if (typeof orbDB !== 'undefined') await orbDB.open();
+
+            // ==========================================
             // EXPORT (BACKUP COMPLET V4 AVEC IMAGES)
             // ==========================================
             document.getElementById('export-backup-btn').addEventListener('click', async () => {
@@ -199,6 +204,9 @@
                             }
                         });
 
+                        // NOUVEAU : On s'assure que la connexion à la base de données est bien active
+                        if (!orbDB.db) await orbDB.open();
+
                         const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
                         
                         const clearAndAdd = (storeName, items) => {
@@ -228,6 +236,7 @@
                 };
                 reader.readAsText(file);
             });
+        });
     </script>
 </body>
 </html>
