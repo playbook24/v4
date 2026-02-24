@@ -58,7 +58,7 @@
         .card-actions button:last-child { border-right: none; }
         .card-actions button:hover { background: var(--color-background); }
         .card-actions button svg { width: 22px; height: 22px; fill: currentColor; }
-        .card-actions button.danger { color: #D32F2F; }
+        .card-actions button.danger { color: var(--color-primary); }
         .card-actions button.primary { color: var(--color-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px;}
 
         /* Modales centrées pour les Tags */
@@ -339,7 +339,7 @@
                     li.dataset.id = tag.id;
                     li.innerHTML = `
                         <span style="font-weight:bold;">${tag.name}</span>
-                        <button class="btn-icon danger" style="color:#D32F2F;" title="Supprimer ce tag">
+                        <button class="btn-icon danger" style="color:var(--color-primary);" title="Supprimer ce tag">
                             <svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
                         </button>
                     `;

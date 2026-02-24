@@ -165,6 +165,6 @@ input:focus, textarea:focus, select:focus { border-color: var(--color-primary); 
     padding-bottom: 10px; margin-bottom: 15px;
 }
 
-.danger { color: #ff4a4a !important; border-color: #ff4a4a !important; }
-button.danger { background: transparent; border: 1px solid #ff4a4a; transition: all 0.2s; }
-button.danger:hover { background: rgba(255, 74, 74, 0.1); }
+.danger { color: var(--color-primary) !important; border-color: var(--color-primary) !important; }
+button.danger { background: transparent; border: 1px solid var(--color-primary); transition: all 0.2s; }
+button.danger:hover { background: rgba(191, 169, 141, 0.1); } /* Effet de survol avec un fond or léger */
