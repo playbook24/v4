@@ -48,7 +48,9 @@
         }
         .toggle-btn:hover { background: #e0e0e0; }
         .toggle-btn.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
-        body.dark-mode .toggle-btn:hover { background: #444; }
+        
+        /* Ajustements pour le mode clair / sombre du bouton lui-même */
+        body:not(.light-mode) .toggle-btn:hover { background: #444; }
         
         .info-text { font-size: 0.85em; opacity: 0.7; margin-top: -5px; line-height: 1.4; }
     </style>
@@ -57,7 +59,7 @@
 
     <header class="app-header">
         <div class="header-content" style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%;">
-            <a href="../../index.html" style="color: white; text-decoration: none; display: flex; align-items: center;">
+            <a href="../../index.html" class="header-back-btn" style="text-decoration: none; display: flex; align-items: center;">
                 <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor; margin-right: 15px;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
             </a>
             <h1 style="margin: 0; text-align: center; flex-grow: 1; padding-right: 43px;">ORB <span class="highlight">PARAMÈTRES</span></h1>
@@ -69,10 +71,10 @@
         <div class="settings-group">
             <h2 style="margin-top:0;">Apparence</h2>
             <div class="settings-row">
-                <span>Mode Sombre</span>
+                <span>Mode Clair</span>
                 <button id="theme-toggle-btn" class="toggle-btn">Activer</button>
             </div>
-            <p class="info-text">Un thème pensé pour économiser la batterie et reposer les yeux.</p>
+            <p class="info-text">Un thème clair classique pour plus de contraste en plein jour.</p>
             
             <div class="settings-row" style="margin-top: 20px;">
                 <span>Thème "Crab"</span>
@@ -102,8 +104,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Applique les thèmes globaux au chargement
-            if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+            // Applique les thèmes globaux au chargement (V4 est sombre par défaut)
+            if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
             if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
 
             // Références boutons
@@ -112,22 +114,23 @@
             const inputModeBtn = document.getElementById('input-mode-btn');
 
             // Initialisation état visuel des boutons
-            if (localStorage.getItem('theme') === 'dark') { themeBtn.textContent = 'Désactiver'; themeBtn.classList.add('active'); }
+            if (localStorage.getItem('theme') === 'light') { themeBtn.textContent = 'Désactiver'; themeBtn.classList.add('active'); }
             if (localStorage.getItem('teamMode') === 'crab') { teamThemeBtn.textContent = 'Désactiver'; teamThemeBtn.classList.add('active'); }
             
             const currentMode = localStorage.getItem('inputMode') || 'mouse';
             inputModeBtn.textContent = currentMode === 'stylus' ? 'Stylet' : 'Souris';
             if (currentMode === 'stylus') inputModeBtn.classList.add('active');
 
-            // Actions
+            // Actions : Thème Clair / Sombre
             themeBtn.addEventListener('click', () => {
-                document.body.classList.toggle('dark-mode');
-                const isDark = document.body.classList.contains('dark-mode');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                themeBtn.textContent = isDark ? 'Désactiver' : 'Activer';
-                themeBtn.classList.toggle('active', isDark);
+                document.body.classList.toggle('light-mode');
+                const isLight = document.body.classList.contains('light-mode');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                themeBtn.textContent = isLight ? 'Désactiver' : 'Activer';
+                themeBtn.classList.toggle('active', isLight);
             });
 
+            // Actions : Thème Crab
             teamThemeBtn.addEventListener('click', () => {
                 document.body.classList.toggle('crab-mode');
                 const isCrab = document.body.classList.contains('crab-mode');
@@ -136,6 +139,7 @@
                 teamThemeBtn.classList.toggle('active', isCrab);
             });
 
+            // Actions : Input Mode (Souris / Stylet)
             inputModeBtn.addEventListener('click', () => {
                 const newMode = inputModeBtn.textContent === 'Souris' ? 'stylus' : 'mouse';
                 localStorage.setItem('inputMode', newMode);

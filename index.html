@@ -82,9 +82,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             // Applique les thèmes
-            if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+            // Applique les thèmes sauvegardés
+            if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
             if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
-
             if (typeof orbDB !== 'undefined') await orbDB.open();
 
             // ==========================================

@@ -140,9 +140,9 @@
     <script src="../../core/db.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Thèmes
-            if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-            if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
+            // Applique les thèmes sur toutes les pages
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+        if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
 
             // Initialisation DB
             if (typeof orbDB !== 'undefined') await orbDB.open();

@@ -168,3 +168,79 @@ input:focus, textarea:focus, select:focus { border-color: var(--color-primary); 
 .danger { color: var(--color-primary) !important; border-color: var(--color-primary) !important; }
 button.danger { background: transparent; border: 1px solid var(--color-primary); transition: all 0.2s; }
 button.danger:hover { background: rgba(191, 169, 141, 0.1); } /* Effet de survol avec un fond or léger */
+
+/* ==========================================
+   MODE CLAIR (LIGHT MODE)
+   ========================================== */
+body.light-mode {
+    --color-background: #F5F5F5;
+    --color-container: #ffffff;
+    --color-border: #e0e0e0;
+    --color-text: #212121;
+    --color-text-muted: #666666;
+    --color-input-background: #ffffff;
+    --color-input-border: #cccccc;
+    --shadow-soft: 0 4px 12px rgba(0,0,0,0.07);
+    --shadow-lifted: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+/* Ajustements visuels spécifiques au mode clair */
+body.light-mode h1 { color: #ffffff; } /* Le titre du header reste lisible */
+body.light-mode .nav-card { border-color: #dcdcdc; }
+body.light-mode .split-btn:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+/* ==========================================
+   MODE CRAB (THÈME ÉQUIPE)
+   ========================================== */
+body.crab-mode {
+    --color-primary: #72243D; /* Bordeaux */
+    --color-primary-hover: #8e2d4c;
+    --color-secondary: #F9AB00; /* Jaune/Or */
+    --color-text-on-gold: #ffffff;
+}
+
+body.crab-mode .app-header {
+    background-color: var(--color-secondary);
+}
+
+body.crab-mode h1 {
+    color: #212121; /* Texte noir sur fond jaune */
+}
+
+body.crab-mode h1 span.highlight {
+    color: var(--color-primary); /* Le "Tactical Board" en bordeaux */
+}
+/* ==========================================
+   TERRAIN (COURT SVG) - ADAPTATION MODE CRAB
+   ========================================== */
+/* Cache le texte "CRAB" par défaut */
+.court-text-crab {
+    display: none;
+}
+
+/* En mode Crab : lignes jaunes, cache "ORB", affiche "CRAB" en jaune */
+body.crab-mode .court-lines {
+    stroke: var(--color-secondary) !important;
+}
+body.crab-mode .court-text-orb {
+    display: none;
+}
+body.crab-mode .court-text-crab {
+    display: block !important;
+    fill: var(--color-secondary) !important;
+}
+
+/* ==========================================
+   CORRECTION BOUTON RETOUR ET HEADER (MODE CLAIR)
+   ========================================== */
+/* Couleur blanche par défaut (Mode sombre) */
+.header-back-btn {
+    color: var(--color-text-on-dark);
+}
+
+/* En Mode clair : Force la flèche et les titres du Header à devenir foncés pour être lisibles */
+body.light-mode .header-back-btn,
+body.light-mode .app-header h1,
+body.light-mode .app-header a {
+    color: var(--color-text) !important;
+}

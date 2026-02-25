@@ -324,7 +324,7 @@ const SheetStudio = {
         });
     },
 
-    async generateSceneImage(playbookData, sceneIndex) {
+   async generateSceneImage(playbookData, sceneIndex) {
         return new Promise((resolve) => {
             window.ORB.playbookState = playbookData;
             window.ORB.playbookState.activeSceneIndex = sceneIndex;
@@ -335,8 +335,35 @@ const SheetStudio = {
             tCanvas.width = w; tCanvas.height = h;
             const tCtx = tCanvas.getContext('2d');
 
+            // On clone le SVG pour le modifier sans affecter l'affichage réel
             const svgElement = document.getElementById('court-svg');
-            const xml = new XMLSerializer().serializeToString(svgElement);
+            const svgClone = svgElement.cloneNode(true);
+            
+            // Détection du mode Crab
+            const isCrab = document.body.classList.contains('crab-mode') || document.documentElement.classList.contains('crab-mode');
+            const primaryColor = isCrab ? '#72243D' : '#BFA98D';
+            const secondaryColor = isCrab ? '#F9AB00' : '#212121';
+
+            // 1. On force la couleur de fond (car la librairie PDF ignore les variables CSS)
+            svgClone.querySelectorAll('[fill="var(--color-primary)"]').forEach(el => el.setAttribute('fill', primaryColor));
+            
+            // 2. On affiche/masque les éléments texte et lignes selon le mode
+            const textOrb = svgClone.querySelector('.court-text-orb');
+            const textCrab = svgClone.querySelector('.court-text-crab');
+            
+            if (isCrab) {
+                svgClone.querySelectorAll('.court-lines').forEach(el => el.setAttribute('stroke', secondaryColor));
+                if (textOrb) textOrb.setAttribute('display', 'none');
+                if (textCrab) {
+                    textCrab.setAttribute('display', 'block');
+                    textCrab.setAttribute('fill', secondaryColor);
+                }
+            } else {
+                if (textCrab) textCrab.setAttribute('display', 'none');
+                if (textOrb) textOrb.setAttribute('display', 'block');
+            }
+
+            const xml = new XMLSerializer().serializeToString(svgClone);
             const svg64 = btoa(unescape(encodeURIComponent(xml)));
             const image64 = 'data:image/svg+xml;base64,' + svg64;
 

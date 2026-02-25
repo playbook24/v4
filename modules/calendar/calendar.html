@@ -136,10 +136,9 @@
     <script src="../../core/db.js"></script>
     <script src="calendar.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-            if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
-        });
+        // Applique les thèmes sur toutes les pages
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+        if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
     </script>
 </body>
 </html>
