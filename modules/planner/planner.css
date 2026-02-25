@@ -149,3 +149,14 @@
 .selector-item-content { display: flex; flex-direction: column; }
 .selector-item-title { font-weight: bold; color: var(--color-text); }
 .selector-item-add { font-size: 0.8em; color: var(--color-primary); margin-top: 4px; font-weight: 600; text-transform: uppercase; }
+/* RESPONSIVE PLANIFICATEUR */
+@media (max-width: 1024px) {
+    .editor-main-layout {
+        grid-template-columns: 1fr; /* Passe d'un layout "1fr 450px" à 1 seule colonne */
+        height: auto;
+    }
+    .editor-right-panel {
+        margin-top: 20px;
+        min-height: 400px;
+    }
+}

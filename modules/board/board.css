@@ -113,3 +113,54 @@ body { margin: 0; overflow: hidden; background: var(--color-background); }
 #basketball-court { z-index: 2; cursor: crosshair; }
 #court-background-container { z-index: 1; }
 .court { width: 100%; height: 100%; display: block; }
+/* RESPONSIVE ÉDITEUR TACTIQUE (Tablette & Mobile) */
+@media (max-width: 1024px) {
+    .board-layout {
+        flex-direction: column; /* La sidebar passe au-dessus ou en-dessous du terrain */
+        height: auto;
+        overflow: visible;
+    }
+    
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        /* Optionnel : limiter la hauteur de la sidebar sur mobile */
+        max-height: 250px; 
+    }
+    
+    .workspace {
+        height: 60vh; /* Le terrain prend le reste de l'écran */
+        min-height: 400px;
+    }
+    
+    .premium-toolbar {
+        flex-wrap: wrap; /* Les boutons d'outils passent à la ligne */
+        padding: 5px;
+        gap: 5px;
+    }
+    
+    .tool-group {
+        padding-right: 5px;
+        border-right: none;
+        margin-bottom: 5px;
+    }
+
+    #court-container {
+        /* Assure que le terrain garde ses proportions mais s'adapte à la largeur */
+        width: 95%; 
+        height: auto; 
+        aspect-ratio: 280 / 150; 
+    }
+}
+
+@media (max-width: 600px) {
+    .tool-btn {
+        width: 36px;
+        height: 36px;
+    }
+    .tool-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+}

@@ -105,3 +105,26 @@
 .align-guide { position: absolute; background-color: #00e5ff; z-index: 999; pointer-events: none; }
 .guide-v { width: 1px; top: 0; bottom: 0; border-left: 1px dashed #00e5ff; background: transparent; }
 .guide-h { height: 1px; left: 0; right: 0; border-top: 1px dashed #00e5ff; background: transparent; }
+/* RESPONSIVE STUDIO PDF */
+@media (max-width: 1024px) {
+    .view-screen.studio-layout {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .studio-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        max-height: 300px;
+    }
+    .studio-workspace {
+        padding: 10px;
+    }
+    .a4-page {
+        /* Permet à la page A4 de s'adapter sur petit écran tout en gardant son ratio */
+        width: 100%;
+        max-width: 794px;
+        height: auto;
+        aspect-ratio: 794 / 1123;
+    }
+}
