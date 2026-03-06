@@ -11,31 +11,57 @@
     <style>
         .library-wrapper { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
         
-        /* En-tête de la page Bibliothèque */
+        /* En-tête */
         .library-header {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--color-container); padding: 20px;
             border-radius: 12px; box-shadow: var(--shadow-soft); border: 1px solid var(--color-border);
             margin-bottom: 20px;
         }
-        .library-header h2 { margin: 0; font-family: var(--font-title); letter-spacing: 1px; }
+        .library-header h2 { margin: 0; font-family: var(--font-title); letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
         
-        /* Barre de filtres */
+        /* Bouton Retour */
+        #btn-back-folders {
+            background: var(--color-background); border: 1px solid var(--color-border);
+            color: var(--color-text); padding: 8px 15px; border-radius: 8px; cursor: pointer;
+            font-weight: bold; transition: all 0.2s; display: none; align-items: center; gap: 5px;
+        }
+        #btn-back-folders:hover { background: var(--color-primary); color: #111; border-color: var(--color-primary); }
+
+        /* Barre de filtres (Tags) */
         .library-filters {
-            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; display: none;
         }
         .library-filters button {
             padding: 8px 18px; border-radius: 20px; border: 1px solid var(--color-border);
             background: var(--color-container); color: var(--color-text); cursor: pointer;
             font-weight: bold; transition: all 0.2s; box-shadow: var(--shadow-soft);
         }
-        .library-filters button:hover { transform: translateY(-2px); }
-        .library-filters button.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .library-filters button:hover { transform: translateY(-2px); border-color: var(--color-primary); }
+        .library-filters button.active { background: var(--color-primary); color: #111; border-color: var(--color-primary); }
         
-        /* Grille des Playbooks */
+        /* Grille Principale */
         .library-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
         }
+
+        /* --- DESIGN DES DOSSIERS --- */
+        .folder-card {
+            background: var(--color-container); border: 1px solid var(--color-border);
+            border-radius: 10px; padding: 20px; display: flex; align-items: center; gap: 20px;
+            cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-soft); position: relative;
+        }
+        .folder-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lifted); border-color: var(--color-primary); }
+        .folder-icon { display: flex; align-items: center; justify-content: center; }
+        .folder-info { flex-grow: 1; }
+        .folder-info h3 { margin: 0 0 5px 0; font-size: 1.2em; color: var(--color-text); }
+        .folder-info p { margin: 0; font-size: 0.9em; opacity: 0.7; color: var(--color-text); }
+        .folder-btn-delete {
+            position: absolute; top: 15px; right: 15px; background: transparent; border: none;
+            color: #ff4444; cursor: pointer; opacity: 0; transition: opacity 0.2s;
+        }
+        .folder-card:hover .folder-btn-delete { opacity: 1; }
+        .folder-btn-delete svg { width: 24px; height: 24px; fill: currentColor; }
 
         /* Cartes Playbooks */
         .playbook-card {
@@ -43,25 +69,27 @@
             border-radius: 10px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
             display: flex; flex-direction: column; box-shadow: var(--shadow-soft);
         }
-        .playbook-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lifted); }
-        .card-preview { aspect-ratio: 280 / 150; background: #e0e0e0; border-bottom: 1px solid var(--color-border); overflow: hidden; }
+        .playbook-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lifted); border-color: var(--color-primary); }
+        .card-preview { aspect-ratio: 280 / 150; background: #1a1a1a; border-bottom: 1px solid var(--color-border); overflow: hidden; }
         .card-preview img { width: 100%; height: 100%; object-fit: cover; }
         .card-info { padding: 15px; flex-grow: 1; }
         .card-info h3 { margin: 0 0 5px 0; font-size: 1.2em; }
         .card-info p { margin: 0; font-size: 0.85em; opacity: 0.7; }
-        .card-tags { padding: 0 15px 10px 15px; display: flex; flex-wrap: wrap; gap: 5px; }
-        .card-tags span { background: var(--color-background); padding: 4px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid var(--color-border); }
+        
+        .card-badges { padding: 0 15px 10px 15px; display: flex; flex-wrap: wrap; gap: 5px; }
+        .card-badges .badge-tag { background: var(--color-background); padding: 4px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid var(--color-border); }
         
         /* Actions des cartes */
         .card-actions { display: flex; border-top: 1px solid var(--color-border); background: var(--color-container); }
         .card-actions button { flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); transition: background 0.2s; color: var(--color-text); }
         .card-actions button:last-child { border-right: none; }
-        .card-actions button:hover { background: var(--color-background); }
+        .card-actions button:hover { background: var(--color-background); color: var(--color-primary); }
         .card-actions button svg { width: 22px; height: 22px; fill: currentColor; }
-        .card-actions button.danger { color: var(--color-primary); }
+        .card-actions button.danger { color: #ff4444; }
+        .card-actions button.danger:hover { background: rgba(255, 68, 68, 0.1); }
         .card-actions button.primary { color: var(--color-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px;}
 
-        /* Modales centrées pour les Tags */
+        /* Modales */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
@@ -69,12 +97,13 @@
         }
         .modal-overlay.hidden { display: none !important; }
         .centered-panel {
-            background: var(--color-container); border-radius: 12px; width: 400px; max-width: 90vw;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 25px;
+            background: var(--color-container); border-radius: 12px; width: 450px; max-width: 90vw;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 25px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--color-primary);
         }
         .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 20px; }
         .panel-header h3 { margin: 0; font-size: 1.3em;}
-        .btn-icon { background: transparent; border: none; cursor: pointer; color: var(--color-text); padding: 5px;}
+        .btn-icon { background: transparent; border: none; cursor: pointer; color: var(--color-text); padding: 5px; transition: color 0.2s;}
+        .btn-icon:hover { color: var(--color-primary); }
         .btn-icon svg { width: 24px; height: 24px; fill: currentColor; }
         
         .add-tag-form { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -83,9 +112,11 @@
         .tag-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
         .tag-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
         
-        .assign-tags-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 20px;}
-        .tag-checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em; }
-        .tag-checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
+        .assignment-section { margin-bottom: 20px; background: var(--color-background); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border); }
+        .assignment-section h4 { margin-top: 0; margin-bottom: 10px; color: var(--color-primary); border-bottom: 1px solid var(--color-border); padding-bottom: 5px; display: flex; align-items: center; gap: 8px;}
+        .assign-list { display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em; }
+        .checkbox-label input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary); }
     </style>
 </head>
 <body>
@@ -101,15 +132,21 @@
 
     <div class="library-wrapper">
         <div class="library-header">
-            <h2>Vos Playbooks</h2>
-            <button id="btn-manage-tags" class="btn-primary" style="padding: 10px 20px; font-size: 1em;">Gérer les Tags</button>
+            <h2 id="library-title">
+                <button id="btn-back-folders">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg> 
+                    Retour
+                </button>
+                <span id="title-text">Vos Dossiers</span>
+            </h2>
+            <div id="header-actions" style="display: flex; gap: 10px;">
+                <button id="btn-create-folder" class="btn-primary" style="padding: 10px 20px; font-size: 1em; background: #111; color: var(--color-primary); border: 1px solid var(--color-primary);">+ Nouveau Dossier</button>
+                <button id="btn-manage-tags" class="btn-primary" style="padding: 10px 20px; font-size: 1em;">Gérer les Tags</button>
+            </div>
         </div>
 
-        <div id="library-filters" class="library-filters">
-            </div>
-
-        <div id="library-grid" class="library-grid">
-            </div>
+        <div id="library-filters" class="library-filters"></div>
+        <div id="library-grid" class="library-grid"></div>
     </div>
 
     <div id="manage-tags-modal" class="modal-overlay hidden">
@@ -126,160 +163,249 @@
         </div>
     </div>
 
-    <div id="assign-tags-modal" class="modal-overlay hidden">
+    <div id="assign-modal" class="modal-overlay hidden">
          <div class="centered-panel">
             <div class="panel-header">
-                <h3 id="assign-tags-title">Assigner des Tags</h3>
-                <button id="assign-tags-close-btn" class="btn-icon"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
+                <h3 id="assign-title">Classer l'exercice</h3>
+                <button id="assign-close-btn" class="btn-icon"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
             </div>
-            <div id="assign-tags-list" class="assign-tags-list"></div>
-            <button id="btn-save-tag-assignment" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1.1em;">Sauvegarder</button>
+            <div class="assignment-section">
+                <h4>
+                    <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor;"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                    Dossiers
+                </h4>
+                <div id="assign-folders-list" class="assign-list"></div>
+            </div>
+            <div class="assignment-section">
+                <h4>
+                    <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor;"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg>
+                    Tags descriptifs
+                </h4>
+                <div id="assign-tags-list" class="assign-list"></div>
+            </div>
+            <button id="btn-save-assignment" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1.1em; margin-top: 10px;">Sauvegarder le classement</button>
         </div>
     </div>
 
     <script src="../../core/db.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Applique les thèmes sur toutes les pages
-        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
-        if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
+            if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+            if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
 
-            // Initialisation DB
             if (typeof orbDB !== 'undefined') await orbDB.open();
 
-            // Variables globales
+            let viewMode = 'FOLDERS'; 
+            let currentFolderId = null; 
+            
             let allPlaybooks = [];
             let allTags = [];
+            let allFolders = [];
             let activeFilterTagId = null; 
-            let currentPlaybookToTag = null; 
+            let currentPlaybookToAssign = null; 
 
-            // Éléments DOM
             const libraryGrid = document.getElementById('library-grid');
             const libraryFilters = document.getElementById('library-filters');
-            const btnManageTags = document.getElementById('btn-manage-tags');
+            const titleText = document.getElementById('title-text');
+            const btnBackFolders = document.getElementById('btn-back-folders');
+            const btnCreateFolder = document.getElementById('btn-create-folder');
             
             const manageTagsModal = document.getElementById('manage-tags-modal');
-            const manageTagsCloseBtn = document.getElementById('manage-tags-close-btn');
-            const newTagInput = document.getElementById('new-tag-name-input');
-            const addNewTagBtn = document.getElementById('btn-add-new-tag');
-            const masterTagList = document.getElementById('master-tag-list');
+            const assignModal = document.getElementById('assign-modal');
 
-            const assignTagsModal = document.getElementById('assign-tags-modal');
-            const assignTagsTitle = document.getElementById('assign-tags-title');
-            const assignTagsCloseBtn = document.getElementById('assign-tags-close-btn');
-            const assignTagsList = document.getElementById('assign-tags-list');
-            const saveTagAssignmentBtn = document.getElementById('btn-save-tag-assignment');
+            // --- ICNONES SVG ---
+            const iconFolder = `<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--color-primary);"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>`;
+            const iconAll = `<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--color-primary);"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H8V4H20V16Z"/></svg>`;
 
-            // --- INITIALISATION ---
-            await loadLibrary();
+            await loadData();
+            renderView();
 
-            // --- GESTION DES MODALES ---
-            btnManageTags.addEventListener('click', async () => {
-                await updateTagsCache();
-                renderMasterTagList();
-                manageTagsModal.classList.remove('hidden');
+            btnBackFolders.addEventListener('click', () => {
+                viewMode = 'FOLDERS';
+                currentFolderId = null;
+                activeFilterTagId = null;
+                renderView();
             });
-            manageTagsCloseBtn.addEventListener('click', () => manageTagsModal.classList.add('hidden'));
-            assignTagsCloseBtn.addEventListener('click', () => assignTagsModal.classList.add('hidden'));
 
-            // --- CRÉATION DE TAGS ---
-            addNewTagBtn.addEventListener('click', async () => {
-                const name = newTagInput.value.trim();
-                if (name) {
-                    try {
-                        await orbDB.addTag(name);
-                        newTagInput.value = '';
-                        await updateTagsCache(); 
-                        renderMasterTagList();
-                        renderFilters(); 
-                    } catch (e) {
-                        alert("Ce tag existe déjà.");
-                    }
+            btnCreateFolder.addEventListener('click', async () => {
+                const name = prompt("Entrez le nom du nouveau dossier (ex: U13, U15, Échauffements) :");
+                if (name && name.trim() !== '') {
+                    await orbDB.addFolder(name.trim());
+                    await loadData();
+                    renderView();
                 }
             });
 
-            // --- SUPPRESSION DE TAGS ---
-            masterTagList.addEventListener('click', async (e) => {
+            // Bouton Gérer les tags
+            document.getElementById('btn-manage-tags').addEventListener('click', async () => {
+                await loadData();
+                const modalTitle = document.querySelector('#manage-tags-modal h3');
+                if (currentFolderId === null || currentFolderId === 'ALL') {
+                    modalTitle.textContent = "Gérer les Tags Globaux";
+                } else {
+                    const folder = allFolders.find(f => f.id === currentFolderId);
+                    modalTitle.textContent = folder ? `Tags : ${folder.name}` : "Gérer les Tags";
+                }
+                renderMasterTagList();
+                manageTagsModal.classList.remove('hidden');
+            });
+
+            document.getElementById('manage-tags-close-btn').addEventListener('click', () => manageTagsModal.classList.add('hidden'));
+            document.getElementById('assign-close-btn').addEventListener('click', () => assignModal.classList.add('hidden'));
+
+            // Ajout d'un tag DANS LE DOSSIER ACTUEL
+            document.getElementById('btn-add-new-tag').addEventListener('click', async () => {
+                const name = document.getElementById('new-tag-name-input').value.trim();
+                if (name) {
+                    try {
+                        let fId = (typeof currentFolderId === 'number') ? currentFolderId : null;
+                        await orbDB.addTag(name, fId);
+                        document.getElementById('new-tag-name-input').value = '';
+                        await loadData(); renderMasterTagList(); renderView(); 
+                    } catch (e) { alert("Ce tag existe déjà."); }
+                }
+            });
+
+            document.getElementById('master-tag-list').addEventListener('click', async (e) => {
                 if (e.target.closest('.btn-icon.danger')) {
                     const tagId = parseInt(e.target.closest('li').dataset.id, 10);
-                    if (confirm("Voulez-vous vraiment supprimer ce tag ? Il sera retiré de tous vos playbooks.")) {
+                    if (confirm("Voulez-vous vraiment supprimer ce tag ?")) {
                         await orbDB.deleteTag(tagId);
-                        // Nettoyer les playbooks
                         allPlaybooks.forEach(pb => {
                             if (pb.tagIds && pb.tagIds.includes(tagId)) {
                                 pb.tagIds = pb.tagIds.filter(id => id !== tagId);
                                 orbDB.assignTagsToPlaybook(pb.id, pb.tagIds); 
                             }
                         });
-                        await updateTagsCache();
-                        renderMasterTagList();
-                        renderFilters(); 
-                        renderGrid();
+                        await loadData(); renderMasterTagList(); renderView();
                     }
                 }
             });
 
-            // --- SAUVEGARDER L'ASSIGNATION ---
-            saveTagAssignmentBtn.addEventListener('click', async () => {
-                if (!currentPlaybookToTag) return;
-                const selectedTagIds = [];
-                assignTagsList.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                    selectedTagIds.push(parseInt(checkbox.value, 10));
-                });
+            // Sauvegarde du classement unifié
+            document.getElementById('btn-save-assignment').addEventListener('click', async () => {
+                if (!currentPlaybookToAssign) return;
+                const selectedFolderIds = Array.from(document.querySelectorAll('#assign-folders-list input:checked')).map(cb => parseInt(cb.value, 10));
+                const selectedTagIds = Array.from(document.querySelectorAll('#assign-tags-list input:checked')).map(cb => parseInt(cb.value, 10));
                 try {
-                    await orbDB.assignTagsToPlaybook(currentPlaybookToTag.id, selectedTagIds);
-                    assignTagsModal.classList.add('hidden');
-                    loadLibrary(); 
-                } catch (e) {
-                    alert("Erreur lors de la sauvegarde des tags.");
-                }
+                    await orbDB.assignFoldersToPlaybook(currentPlaybookToAssign.id, selectedFolderIds);
+                    await orbDB.assignTagsToPlaybook(currentPlaybookToAssign.id, selectedTagIds);
+                    assignModal.classList.add('hidden');
+                    await loadData(); renderView();
+                } catch (e) { alert("Erreur lors de la sauvegarde."); }
             });
 
-            // --- FONCTIONS D'AFFICHAGE ---
-            async function loadLibrary() {
-                try {
-                    [allPlaybooks, allTags] = await Promise.all([orbDB.getAllPlaybooks(), orbDB.getAllTags()]);
-                    renderFilters();
-                    renderGrid();
-                } catch (error) {
-                    libraryGrid.innerHTML = '<p>Erreur lors du chargement des données.</p>';
+            async function loadData() {
+                [allPlaybooks, allTags, allFolders] = await Promise.all([
+                    orbDB.getAllPlaybooks(), orbDB.getAllTags(), orbDB.getAllFolders()
+                ]);
+            }
+
+            function renderView() {
+                if (viewMode === 'FOLDERS') {
+                    renderFoldersGrid();
+                } else {
+                    renderPlaybooksGrid();
                 }
             }
 
-            async function updateTagsCache() {
-                allTags = await orbDB.getAllTags();
-            }
+            // --- VUE DOSSIERS ---
+            function renderFoldersGrid() {
+                titleText.textContent = "Vos Dossiers";
+                btnBackFolders.style.display = 'none';
+                btnCreateFolder.style.display = 'inline-block';
+                libraryFilters.style.display = 'none';
+                libraryGrid.innerHTML = '';
 
-            function renderFilters() {
-                libraryFilters.innerHTML = ''; 
-                
-                const allBtn = document.createElement('button');
-                allBtn.textContent = "Tout voir";
-                if (activeFilterTagId === null) allBtn.classList.add('active');
-                allBtn.onclick = () => { activeFilterTagId = null; renderFilters(); renderGrid(); };
-                libraryFilters.appendChild(allBtn);
+                libraryGrid.appendChild(createFolderCard('ALL', 'Tous les schémas', iconAll, allPlaybooks.length));
 
-                allTags.forEach(tag => {
-                    const tagBtn = document.createElement('button');
-                    tagBtn.textContent = tag.name;
-                    if (activeFilterTagId === tag.id) tagBtn.classList.add('active');
-                    tagBtn.onclick = () => { activeFilterTagId = tag.id; renderFilters(); renderGrid(); };
-                    libraryFilters.appendChild(tagBtn);
+                allFolders.forEach(folder => {
+                    const count = allPlaybooks.filter(pb => pb.folderIds && pb.folderIds.includes(folder.id)).length;
+                    libraryGrid.appendChild(createFolderCard(folder.id, folder.name, iconFolder, count, true));
                 });
             }
 
-            function renderGrid() {
+            function createFolderCard(id, name, icon, count, isDeletable = false) {
+                const card = document.createElement('div');
+                card.className = 'folder-card';
+                card.innerHTML = `
+                    <div class="folder-icon">${icon}</div>
+                    <div class="folder-info">
+                        <h3>${name}</h3>
+                        <p>${count} exercice${count > 1 ? 's' : ''}</p>
+                    </div>
+                    ${isDeletable ? `<button class="folder-btn-delete" title="Supprimer ce dossier"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>` : ''}
+                `;
+                card.addEventListener('click', async (e) => {
+                    if (e.target.closest('.folder-btn-delete')) {
+                        e.stopPropagation();
+                        if(confirm(`Voulez-vous vraiment supprimer le dossier "${name}" ?\n(Les exercices ne seront pas supprimés)`)) {
+                            await orbDB.deleteFolder(id);
+                            allPlaybooks.forEach(pb => {
+                                if (pb.folderIds && pb.folderIds.includes(id)) {
+                                    pb.folderIds = pb.folderIds.filter(fid => fid !== id);
+                                    orbDB.assignFoldersToPlaybook(pb.id, pb.folderIds); 
+                                }
+                            });
+                            await loadData(); renderView();
+                        }
+                        return;
+                    }
+                    viewMode = 'PLAYBOOKS';
+                    currentFolderId = id;
+                    titleText.textContent = name;
+                    renderView();
+                });
+                return card;
+            }
+
+            // --- VUE EXERCICES ---
+            function renderPlaybooksGrid() {
+                btnBackFolders.style.display = 'inline-flex';
+                btnCreateFolder.style.display = 'none';
                 libraryGrid.innerHTML = '';
-                const filteredPlaybooks = (activeFilterTagId === null) ? allPlaybooks : allPlaybooks.filter(pb => pb.tagIds && pb.tagIds.includes(activeFilterTagId));
+                
+                let filteredPlaybooks = allPlaybooks;
+                if (currentFolderId !== 'ALL') {
+                    filteredPlaybooks = filteredPlaybooks.filter(pb => pb.folderIds && pb.folderIds.includes(currentFolderId));
+                }
+
+                if (activeFilterTagId !== null) {
+                    filteredPlaybooks = filteredPlaybooks.filter(pb => pb.tagIds && pb.tagIds.includes(activeFilterTagId));
+                }
+
+                renderFiltersInFolder();
 
                 if (filteredPlaybooks.length === 0) {
-                    libraryGrid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 40px; opacity:0.6; font-size:1.2em;">Aucun playbook trouvé.</p>';
+                    libraryGrid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 40px; opacity:0.6; font-size:1.2em;">Aucun schéma dans cette vue.</p>';
                     return;
                 }
 
                 filteredPlaybooks.reverse().forEach(playbook => {
-                    const card = createPlaybookCard(playbook);
-                    libraryGrid.appendChild(card);
+                    libraryGrid.appendChild(createPlaybookCard(playbook));
+                });
+            }
+
+            // Barre de tags selon le dossier ouvert
+            function renderFiltersInFolder() {
+                libraryFilters.innerHTML = ''; 
+                libraryFilters.style.display = 'flex';
+                
+                const allBtn = document.createElement('button');
+                allBtn.textContent = "Tous les tags";
+                if (activeFilterTagId === null) allBtn.classList.add('active');
+                allBtn.onclick = () => { activeFilterTagId = null; renderView(); };
+                libraryFilters.appendChild(allBtn);
+
+                let fId = (typeof currentFolderId === 'number') ? currentFolderId : null;
+                const currentTags = allTags.filter(t => t.folderId == fId);
+
+                currentTags.forEach(tag => {
+                    const tagBtn = document.createElement('button');
+                    tagBtn.textContent = tag.name;
+                    if (activeFilterTagId === tag.id) tagBtn.classList.add('active');
+                    tagBtn.onclick = () => { activeFilterTagId = tag.id; renderView(); };
+                    libraryFilters.appendChild(tagBtn);
                 });
             }
 
@@ -290,40 +416,32 @@
                 
                 let previewUrl = "";
                 let needsRevoke = false; 
-
                 if (playbook.preview instanceof Blob) {
                     try { previewUrl = URL.createObjectURL(playbook.preview); needsRevoke = true; } 
                     catch (e) {}
                 }
 
-                let tagsHtml = '';
+                let badgesHtml = '';
                 if (playbook.tagIds && playbook.tagIds.length > 0) {
-                    const tagNames = playbook.tagIds.map(id => {
-                        const tag = allTags.find(t => t.id === id);
-                        return tag ? tag.name : '';
-                    }).filter(name => name !== '');
-                    
-                    if(tagNames.length > 0) {
-                        tagsHtml = `<div class="card-tags">${tagNames.map(name => `<span>${name}</span>`).join('')}</div>`;
-                    }
+                    const tagNames = playbook.tagIds.map(id => allTags.find(t => t.id === id)?.name).filter(Boolean);
+                    tagNames.forEach(name => badgesHtml += `<span class="badge-tag">${name}</span>`);
                 }
 
                 card.innerHTML = `
                     <div class="card-preview">
-                        ${previewUrl ? `<img src="${previewUrl}" alt="Aperçu">` : `<div style="padding: 20px; text-align:center; display:flex; height:100%; align-items:center; justify-content:center; opacity:0.5;">Pas d'aperçu</div>`}
+                        ${previewUrl ? `<img src="${previewUrl}" alt="Aperçu">` : `<div style="padding: 20px; text-align:center; display:flex; height:100%; align-items:center; justify-content:center; opacity:0.5; font-size: 0.9em;">Pas d'aperçu</div>`}
                     </div>
                     <div class="card-info">
                         <h3>${playbook.name || "Sans nom"}</h3>
                         <p>${new Date(playbook.createdAt).toLocaleDateString()}</p>
                     </div>
-                    ${tagsHtml} 
+                    ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''} 
                     <div class="card-actions">
-                        <button class="card-btn-assign-tags" title="Assigner des tags"><svg viewBox="0 0 24 24"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg></button>
+                        <button class="card-btn-assign-tags" title="Classer l'exercice"><svg viewBox="0 0 24 24"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg></button>
                         <button class="card-btn-delete danger" title="Supprimer"><svg viewBox="0 0 24 24"><path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19A2 2 0 0 0 8 21H16A2 2 0 0 0 18 19V7H6V19Z"/></svg></button>
                         <button class="card-btn-load primary" title="Ouvrir dans l'éditeur">Ouvrir <svg viewBox="0 0 24 24"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" /></svg></button>
                     </div>
                 `;
-                
                 if (needsRevoke) {
                     const img = card.querySelector('img');
                     if(img) img.onload = () => URL.revokeObjectURL(previewUrl);
@@ -331,40 +449,98 @@
                 return card;
             }
 
-            function renderMasterTagList() {
-                masterTagList.innerHTML = '';
-                if (allTags.length === 0) return masterTagList.innerHTML = '<li style="justify-content:center; opacity:0.6;">Aucun tag créé.</li>';
-                allTags.forEach(tag => {
-                    const li = document.createElement('li');
-                    li.dataset.id = tag.id;
-                    li.innerHTML = `
-                        <span style="font-weight:bold;">${tag.name}</span>
-                        <button class="btn-icon danger" style="color:var(--color-primary);" title="Supprimer ce tag">
-                            <svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
-                        </button>
-                    `;
-                    masterTagList.appendChild(li);
-                });
+            // --- FONCTION INTELLIGENTE DE CLASSEMENT ---
+            function openAssignModal(playbook) {
+                currentPlaybookToAssign = playbook;
+                document.getElementById('assign-title').textContent = `Classer : ${playbook.name}`;
+                
+                const playbookFolderIds = new Set(playbook.folderIds || []);
+                const playbookTagIds = new Set(playbook.tagIds || []);
+                
+                const assignFoldersList = document.getElementById('assign-folders-list');
+                assignFoldersList.innerHTML = '';
+
+                if (allFolders.length === 0) {
+                    assignFoldersList.innerHTML = '<p style="font-size:0.9em; opacity:0.7;">Aucun dossier créé.</p>';
+                } else {
+                    allFolders.forEach(folder => {
+                        const isChecked = playbookFolderIds.has(folder.id);
+                        const label = document.createElement('label');
+                        label.className = 'checkbox-label';
+                        label.innerHTML = `<input type="checkbox" class="folder-checkbox" value="${folder.id}" ${isChecked ? 'checked' : ''}><span>${folder.name}</span>`;
+                        
+                        // Si on coche/décoche un dossier, on met à jour la liste des tags en dessous !
+                        label.querySelector('input').addEventListener('change', () => renderAssignTagsSection(playbookTagIds));
+                        assignFoldersList.appendChild(label);
+                    });
+                }
+
+                renderAssignTagsSection(playbookTagIds);
+                assignModal.classList.remove('hidden');
             }
 
-            function openAssignTagsModal(playbook) {
-                currentPlaybookToTag = playbook;
-                assignTagsTitle.textContent = `Tags : ${playbook.name}`;
-                assignTagsList.innerHTML = '';
-                if (allTags.length === 0) return assignTagsList.innerHTML = '<p>Créez d\'abord des tags.</p>';
+            // Génération dynamique des tags selon les dossiers cochés
+            function renderAssignTagsSection(playbookTagIds) {
+                const assignTagsList = document.getElementById('assign-tags-list');
+                
+                // Mémoriser les tags déjà cochés dans la modale avant de la redessiner
+                document.querySelectorAll('.tag-checkbox').forEach(cb => {
+                    const tId = parseInt(cb.value, 10);
+                    if (cb.checked) playbookTagIds.add(tId); else playbookTagIds.delete(tId);
+                });
 
-                const playbookTagIds = new Set(playbook.tagIds || []);
-                allTags.forEach(tag => {
+                assignTagsList.innerHTML = '';
+                const selectedFolderIds = Array.from(document.querySelectorAll('.folder-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+                let hasTags = false;
+
+                // Tags Globaux
+                const globalTags = allTags.filter(t => t.folderId == null);
+                if (globalTags.length > 0) {
+                    hasTags = true; appendTagGroup(assignTagsList, "🌐 Tags Globaux", globalTags, playbookTagIds);
+                }
+
+                // Tags des dossiers sélectionnés
+                selectedFolderIds.forEach(fId => {
+                    const folder = allFolders.find(f => f.id === fId);
+                    const fTags = allTags.filter(t => t.folderId === fId);
+                    if (fTags.length > 0 && folder) {
+                        hasTags = true; appendTagGroup(assignTagsList, `📁 Tags : ${folder.name}`, fTags, playbookTagIds);
+                    }
+                });
+
+                if (!hasTags) {
+                    assignTagsList.innerHTML = '<p style="font-size:0.9em; opacity:0.7;">Aucun tag disponible pour les dossiers sélectionnés.</p>';
+                }
+            }
+
+            function appendTagGroup(container, title, tags, playbookTagIds) {
+                const groupTitle = document.createElement('div');
+                groupTitle.style.cssText = 'font-weight:bold; margin-top:10px; margin-bottom:5px; color:var(--color-primary); font-size:0.9em;';
+                groupTitle.textContent = title;
+                container.appendChild(groupTitle);
+                
+                tags.forEach(tag => {
                     const isChecked = playbookTagIds.has(tag.id);
                     const label = document.createElement('label');
-                    label.className = 'tag-checkbox-label';
-                    label.innerHTML = `<input type="checkbox" value="${tag.id}" ${isChecked ? 'checked' : ''}><span>${tag.name}</span>`;
-                    assignTagsList.appendChild(label);
+                    label.className = 'checkbox-label';
+                    label.innerHTML = `<input type="checkbox" class="tag-checkbox" value="${tag.id}" ${isChecked ? 'checked' : ''}><span>${tag.name}</span>`;
+                    container.appendChild(label);
                 });
-                assignTagsModal.classList.remove('hidden');
             }
 
-            // --- CLICS SUR LA GRILLE (DÉLÉGATION) ---
+            function renderMasterTagList() {
+                const masterTagList = document.getElementById('master-tag-list');
+                masterTagList.innerHTML = '';
+                
+                let fId = (typeof currentFolderId === 'number') ? currentFolderId : null;
+                const currentTags = allTags.filter(t => t.folderId == fId);
+
+                if (currentTags.length === 0) return masterTagList.innerHTML = '<li style="justify-content:center; opacity:0.6;">Aucun tag créé ici.</li>';
+                currentTags.forEach(tag => {
+                    masterTagList.innerHTML += `<li data-id="${tag.id}"><span style="font-weight:bold;">${tag.name}</span><button class="btn-icon danger" style="color:#ff4444;" title="Supprimer ce tag"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button></li>`;
+                });
+            }
+
             libraryGrid.addEventListener('click', async (e) => {
                 const playbookCard = e.target.closest('.playbook-card');
                 if (!playbookCard) return;
@@ -372,25 +548,18 @@
                 const playbookId = parseInt(playbookCard.dataset.id, 10);
                 if (isNaN(playbookId)) return;
                 
-                // Supprimer
                 if (e.target.closest('.card-btn-delete')) {
                     if (confirm(`Voulez-vous vraiment supprimer ce schéma tactique ?`)) {
                         await orbDB.deletePlaybook(playbookId);
-                        loadLibrary(); 
+                        await loadData(); renderView();
                     }
                 }
-                
-                // Assigner Tags
                 if (e.target.closest('.card-btn-assign-tags')) {
                     const playbook = allPlaybooks.find(p => p.id === playbookId);
-                    if (playbook) openAssignTagsModal(playbook);
+                    if (playbook) openAssignModal(playbook);
                 }
-
-                // Charger (Redirige vers Board !)
                 if (e.target.closest('.card-btn-load')) {
-                    // On enregistre l'ordre de chargement dans le navigateur
                     localStorage.setItem('orb_pending_load_id', playbookId);
-                    // On redirige vers l'éditeur
                     window.location.href = '../board/board.html';
                 }
             });

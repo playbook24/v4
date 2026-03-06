@@ -44,7 +44,21 @@
         </div>
     </div>
 
-    <div id="view-select-exo" class="view-screen hidden"><div class="selection-container"><button class="btn-back-hub" onclick="SheetStudio.switchView('hub')">&larr; Retour</button><h2>Sélectionner un Exercice</h2><div id="filter-tags-exo" class="tags-filter-bar"></div><input type="text" id="search-exo" class="search-input" placeholder="Rechercher..."><div id="list-select-exo" class="grid-list"></div></div></div>
+    <div id="view-select-exo" class="view-screen hidden">
+        <div class="selection-container">
+            <div style="display:flex; align-items:center; gap: 15px; margin-bottom: 20px;">
+                <button class="btn-back-hub" id="btn-sheet-exo-back" style="margin:0; display:flex; align-items:center; gap:5px;">
+                    <svg viewBox="0 0 24 24" style="width:18px; fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg> Retour
+                </button>
+                <h2 id="sheet-exo-title" style="margin:0;">Vos Dossiers</h2>
+            </div>
+            
+            <div id="filter-tags-exo" class="tags-filter-bar hidden"></div>
+            <input type="text" id="search-exo" class="search-input hidden" placeholder="🔍 Rechercher un exercice...">
+            <div id="list-select-exo" class="grid-list"></div>
+        </div>
+    </div>
+
     <div id="view-select-plan" class="view-screen hidden"><div class="selection-container"><button class="btn-back-hub" onclick="SheetStudio.switchView('hub')">&larr; Retour</button><h2>Sélectionner un Entraînement</h2><div id="list-select-plan" class="grid-list"></div></div></div>
     
     <div id="view-storage" class="view-screen hidden">
@@ -73,7 +87,6 @@
             <div class="sidebar-section sidebar-tools-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <h4 style="margin:0; color:var(--color-primary); font-family:'Anton'; letter-spacing:1px; font-size: 1.1em;">OUTILS TEXTE</h4>
-                    
                     <button id="btn-add-text" class="studio-tool-btn" style="width:auto; padding: 4px 10px; font-size:0.85em; background:rgba(191, 169, 141, 0.15); border-color:var(--color-primary);">
                         <svg viewBox="0 0 24 24" style="width:14px; height:14px; margin-right:4px;"><path d="M9,4V7H11V19H13V7H15V4H9M18.5,11L15.5,18H17.5L18,16.8H21L18.5,11Z"/></svg>
                         Nouveau
@@ -99,7 +112,6 @@
                 <button id="btn-back-to-plan" class="studio-tool-btn hidden" style="margin-bottom: 10px; padding: 6px;">&larr; Retour aux exercices</button>
                 <h4 id="active-exo-title" style="margin-top:0; margin-bottom:10px; color:var(--color-primary);">Nom de l'exo</h4>
                 <button id="btn-add-all-scenes" class="btn-primary" style="width:100%; margin-bottom:15px; padding: 8px;">Tout placer sur la page</button>
-                
                 <div id="exo-scenes-gallery" class="playbook-gallery-list"></div>
             </div>
         </aside>
@@ -127,16 +139,13 @@
         <div id="court-background-container" style="position: relative; width: 100%; height: 100%; background: #BFA98D;">
             <svg id="court-svg" viewBox="0 0 280 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width: 100%; height: 100%; display: block;">
                 <rect x="0" y="0" width="280" height="150" fill="var(--color-primary)"/>
-                
                 <g class="court-lines" stroke="#212121" stroke-width="0.6" fill="none"><rect x="0" y="0" width="280" height="150"/><line x1="140" y1="0" x2="140" y2="150"/><rect x="0" y="50.5" width="58" height="49" /><path d="M 58 50.5 A 18 18 0 0 1 58 99.5" /><path d="M 0 6 L 29.1 6 A 67.5 67.5 0 0 1 29.1 144 L 0 144" /><rect x="222" y="50.5" width="58" height="49" /><path d="M 222 50.5 A 18 18 0 0 0 222 99.5" /><path d="M 280 6 L 250.9 6 A 67.5 67.5 0 0 0 250.9 144 L 280 144" /></g>
-                
                 <g class="center-court-logo">
                     <circle cx="140" cy="75" r="18" fill="var(--color-primary)" />
                     <circle class="court-lines" cx="140" cy="75" r="18" fill="none" stroke="#212121" stroke-width="0.6"/>
                     <text class="court-text-orb" x="140" y="76" font-family="Impact, 'Arial Black', sans-serif" font-size="15" fill="#212121" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.5">ORB</text>
                     <text class="court-text-crab" x="140" y="76" font-family="Impact, 'Arial Black', sans-serif" font-size="15" fill="#212121" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.5">CRAB</text>
                 </g>
-                
                 <g class="court-lines" stroke="#212121" fill="none"><g transform="translate(15.75, 75)"><line x1="-3.75" y1="-9" x2="-3.75" y2="9" stroke-width="0.8"/><circle cx="0" cy="0" r="2.25" stroke-width="0.5"/><path d="M 0 -12.5 A 12.5 12.5 0 0 1 0 12.5" stroke-width="0.6"/></g><g transform="translate(264.25, 75)"><line x1="3.75" y1="-9" x2="3.75" y2="9" stroke-width="0.8"/><circle cx="0" cy="0" r="2.25" stroke-width="0.5"/><path d="M 0 -12.5 A 12.5 12.5 0 0 0 0 12.5" stroke-width="0.6"/></g></g>
             </svg>
             <canvas id="basketball-court" width="560" height="300" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;"></canvas>
@@ -151,7 +160,6 @@
     <script src="../board/renderer.js"></script>
     <script src="sheet.js"></script>
     <script>
-    // Applique les thèmes sur toutes les pages
         if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
         if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
     </script>

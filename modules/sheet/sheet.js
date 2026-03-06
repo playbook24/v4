@@ -1,12 +1,17 @@
 /**
  * modules/sheet/sheet.js
- * Avec Lignes d'Alignement Visuelles (Sans aimantation)
+ * V5 - Studio PDF avec Navigation par Dossiers
  */
 
 const SheetStudio = {
-    allPlaybooks: [], allPlans: [], allSheets: [], allSheetTags: [],
+    allPlaybooks: [], allPlans: [], allSheets: [], allTags: [], allSheetTags: [], allFolders: [],
     currentMode: null, currentPlanId: null, currentSheetId: null,
-    activeTagExo: null, activeTagStorage: null,
+    
+    // NOUVEAU : Navigation par Dossiers
+    exoViewMode: 'FOLDERS', 
+    currentExoFolderId: null,
+    activeTagExo: null, 
+    activeTagStorage: null,
     
     selectedElement: null, isDragging: false, isResizing: false,
     offsetX: 0, offsetY: 0, startW: 0, startH: 0, startLeft: 0, startTop: 0,
@@ -14,6 +19,9 @@ const SheetStudio = {
     resizeMode: null, aspectRatio: 1, spawnOffset: 0,
 
     history: [], historyIndex: -1,
+
+    iconFolder: `<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--color-primary);"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>`,
+    iconAll: `<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:var(--color-primary);"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H8V4H20V16Z"/></svg>`,
 
     async init() {
         try {
@@ -45,13 +53,42 @@ const SheetStudio = {
         this.listStorage = document.getElementById('list-storage');
         this.pagesContainer = document.getElementById('pages-container');
         this.workspace = document.getElementById('workspace');
+        
+        this.exoTitle = document.getElementById('sheet-exo-title');
+        this.btnExoBack = document.getElementById('btn-sheet-exo-back');
+        this.filterTagsExo = document.getElementById('filter-tags-exo');
+        this.searchExo = document.getElementById('search-exo');
     },
 
     bindEvents() {
-        document.getElementById('nav-new-exo').onclick = () => { this.currentSheetId = null; this.switchView('selectExo'); };
+        // Clic sur Fiche Exercice : On réinitialise la vue aux Dossiers
+        document.getElementById('nav-new-exo').onclick = () => { 
+            this.currentSheetId = null; 
+            this.exoViewMode = 'FOLDERS'; 
+            this.currentExoFolderId = null;
+            this.activeTagExo = null;
+            this.searchExo.value = '';
+            this.switchView('selectExo'); 
+            this.renderSelectExoView();
+        };
+
         document.getElementById('nav-new-plan').onclick = () => { this.currentSheetId = null; this.switchView('selectPlan'); };
         document.getElementById('nav-storage').onclick = () => { this.switchView('storage'); };
-        document.getElementById('search-exo').oninput = (e) => this.renderSelectExoList(e.target.value);
+        
+        this.searchExo.oninput = (e) => this.renderExoPlaybooks(e.target.value);
+
+        // Bouton Retour de la sélection Exo
+        this.btnExoBack.onclick = () => {
+            if (this.exoViewMode === 'PLAYBOOKS') {
+                this.exoViewMode = 'FOLDERS';
+                this.currentExoFolderId = null;
+                this.activeTagExo = null;
+                this.searchExo.value = '';
+                this.renderSelectExoView();
+            } else {
+                this.switchView('hub');
+            }
+        };
 
         document.getElementById('btn-back-menu').onclick = () => {
             if(confirm("Avez-vous bien sauvegardé vos modifications ? Les éléments non enregistrés seront perdus.")) {
@@ -111,7 +148,7 @@ const SheetStudio = {
                 this.allSheetTags = await orbDB.getAllSheetTags();
                 document.getElementById('storage-new-tag-input').value = '';
                 this.renderStorageTagsManager();
-                this.renderTagsFilter('storage');
+                this.renderTagsFilterStorage();
             }
         };
 
@@ -147,59 +184,119 @@ const SheetStudio = {
 
     async loadData() {
         try {
-            [this.allPlaybooks, this.allPlans, this.allSheets, this.allTags, this.allSheetTags] = await Promise.all([
-                orbDB.getAllPlaybooks(), orbDB.getAllPlans(), orbDB.getAllSheets(), orbDB.getAllTags(), orbDB.getAllSheetTags()
+            [this.allPlaybooks, this.allPlans, this.allSheets, this.allTags, this.allSheetTags, this.allFolders] = await Promise.all([
+                orbDB.getAllPlaybooks(), orbDB.getAllPlans(), orbDB.getAllSheets(), orbDB.getAllTags(), orbDB.getAllSheetTags(), orbDB.getAllFolders()
             ]);
         } catch(e) {
             console.warn("Base de données en cours de mise à jour, fallback activé.");
             this.allSheetTags = [];
+            this.allFolders = [];
         }
-        this.renderTagsFilter('exo');
-        this.renderTagsFilter('storage');
-        this.renderSelectExoList();
+        this.renderTagsFilterStorage();
         this.renderSelectPlanList();
         this.renderStorageList();
     },
 
-    renderTagsFilter(type) {
-        const container = document.getElementById(type === 'exo' ? 'filter-tags-exo' : 'filter-tags-storage');
-        container.innerHTML = '';
-        const allBtn = document.createElement('div');
-        allBtn.className = `tag-chip ${this[type === 'exo' ? 'activeTagExo' : 'activeTagStorage'] === null ? 'active' : ''}`;
-        allBtn.textContent = "Tous";
-        allBtn.onclick = () => { 
-            if(type === 'exo') { this.activeTagExo = null; this.renderSelectExoList(); }
-            else { this.activeTagStorage = null; this.renderStorageList(); }
-            this.renderTagsFilter(type);
-        };
-        container.appendChild(allBtn);
+    // --- NAVIGATION DANS LA SÉLECTION D'EXERCICE ---
+    renderSelectExoView() {
+        if (this.exoViewMode === 'FOLDERS') {
+            this.renderExoFolders();
+        } else {
+            this.renderExoPlaybooks(this.searchExo.value);
+        }
+    },
 
-        const tagsToUse = type === 'exo' ? this.allTags : this.allSheetTags;
-        tagsToUse.forEach(t => {
-            const btn = document.createElement('div');
-            const isActive = type === 'exo' ? this.activeTagExo === t.id : this.activeTagStorage === t.id;
-            btn.className = `tag-chip ${isActive ? 'active' : ''}`;
-            btn.textContent = t.name;
-            btn.onclick = () => { 
-                if(type === 'exo') { this.activeTagExo = t.id; this.renderSelectExoList(); }
-                else { this.activeTagStorage = t.id; this.renderStorageList(); }
-                this.renderTagsFilter(type);
-            };
-            container.appendChild(btn);
+    renderExoFolders() {
+        this.exoTitle.textContent = "Vos Dossiers";
+        this.filterTagsExo.classList.add('hidden');
+        this.searchExo.classList.add('hidden');
+        this.listExo.innerHTML = '';
+
+        // Tous les schémas
+        const divAll = document.createElement('div'); 
+        divAll.className = 'grid-card';
+        divAll.innerHTML = `<div style="height:110px; background:rgba(255,255,255,0.05); border-radius:4px; margin-bottom:10px; display:flex; align-items:center; justify-content:center;">${this.iconAll}</div> <strong>Tous les schémas</strong>`;
+        divAll.onclick = () => { this.exoViewMode = 'PLAYBOOKS'; this.currentExoFolderId = 'ALL'; this.renderSelectExoView(); };
+        this.listExo.appendChild(divAll);
+
+        // Dossiers utilisateurs
+        this.allFolders.forEach(folder => {
+            const count = this.allPlaybooks.filter(pb => pb.folderIds && pb.folderIds.includes(folder.id)).length;
+            const div = document.createElement('div'); 
+            div.className = 'grid-card';
+            div.innerHTML = `<div style="height:110px; background:rgba(255,255,255,0.05); border-radius:4px; margin-bottom:10px; display:flex; align-items:center; justify-content:center;">${this.iconFolder}</div> <strong>${folder.name}</strong><span style="font-size:0.85em; opacity:0.6;">${count} exos</span>`;
+            div.onclick = () => { this.exoViewMode = 'PLAYBOOKS'; this.currentExoFolderId = folder.id; this.exoTitle.textContent = folder.name; this.renderSelectExoView(); };
+            this.listExo.appendChild(div);
         });
     },
 
-    renderSelectExoList(searchText = '') {
+    renderExoPlaybooks(searchText = '') {
+        this.filterTagsExo.classList.remove('hidden');
+        this.searchExo.classList.remove('hidden');
         this.listExo.innerHTML = '';
-        let filtered = this.allPlaybooks.filter(pb => (pb.name || '').toLowerCase().includes(searchText.toLowerCase()));
-        if (this.activeTagExo) filtered = filtered.filter(pb => pb.tagIds && pb.tagIds.includes(this.activeTagExo));
 
+        // 1. Tags spécifiques au dossier
+        this.filterTagsExo.innerHTML = '';
+        const allBtn = document.createElement('div');
+        allBtn.className = `tag-chip ${this.activeTagExo === null ? 'active' : ''}`;
+        allBtn.textContent = "Tous les tags";
+        allBtn.onclick = () => { this.activeTagExo = null; this.renderExoPlaybooks(this.searchExo.value); };
+        this.filterTagsExo.appendChild(allBtn);
+
+        let fId = (typeof this.currentExoFolderId === 'number') ? this.currentExoFolderId : null;
+        const currentTags = this.allTags.filter(t => t.folderId == fId);
+        
+        currentTags.forEach(t => {
+            const btn = document.createElement('div');
+            btn.className = `tag-chip ${this.activeTagExo === t.id ? 'active' : ''}`;
+            btn.textContent = t.name;
+            btn.onclick = () => { this.activeTagExo = this.activeTagExo === t.id ? null : t.id; this.renderExoPlaybooks(this.searchExo.value); };
+            this.filterTagsExo.appendChild(btn);
+        });
+
+        // 2. Filtrage des exos
+        let filtered = this.allPlaybooks;
+        if (this.currentExoFolderId !== 'ALL') {
+            filtered = filtered.filter(pb => pb.folderIds && pb.folderIds.includes(this.currentExoFolderId));
+        }
+        if (this.activeTagExo !== null) {
+            filtered = filtered.filter(pb => pb.tagIds && pb.tagIds.includes(this.activeTagExo));
+        }
+        
+        const searchLower = searchText.toLowerCase();
+        filtered = filtered.filter(pb => (pb.name || '').toLowerCase().includes(searchLower));
+
+        if (filtered.length === 0) {
+            this.listExo.innerHTML = '<p style="grid-column: 1/-1; text-align:center; opacity:0.6; padding: 20px;">Aucun exercice trouvé.</p>';
+            return;
+        }
+
+        // 3. Affichage
         filtered.reverse().forEach(pb => {
             let src = ''; if (pb.preview instanceof Blob) { try { src = URL.createObjectURL(pb.preview); } catch(e){} }
             const div = document.createElement('div'); div.className = 'grid-card';
             div.innerHTML = `${src ? `<img src="${src}">` : `<div style="height:110px; background:#BFA98D; border-radius:4px; margin-bottom:10px; display:flex; align-items:center; justify-content:center; color:#000; font-weight:bold;">Aperçu</div>`} <strong>${pb.name || 'Sans nom'}</strong>`;
             div.onclick = () => this.startEditor('exo', pb.id);
             this.listExo.appendChild(div);
+        });
+    },
+
+    // --- AUTRES LISTES ---
+    renderTagsFilterStorage() {
+        const container = document.getElementById('filter-tags-storage');
+        container.innerHTML = '';
+        const allBtn = document.createElement('div');
+        allBtn.className = `tag-chip ${this.activeTagStorage === null ? 'active' : ''}`;
+        allBtn.textContent = "Toutes les fiches";
+        allBtn.onclick = () => { this.activeTagStorage = null; this.renderStorageList(); this.renderTagsFilterStorage(); };
+        container.appendChild(allBtn);
+
+        this.allSheetTags.forEach(t => {
+            const btn = document.createElement('div');
+            btn.className = `tag-chip ${this.activeTagStorage === t.id ? 'active' : ''}`;
+            btn.textContent = t.name;
+            btn.onclick = () => { this.activeTagStorage = t.id; this.renderStorageList(); this.renderTagsFilterStorage(); };
+            container.appendChild(btn);
         });
     },
 
@@ -261,7 +358,7 @@ const SheetStudio = {
                     await orbDB.db.transaction(['sheetTags'], 'readwrite').objectStore('sheetTags').delete(t.id);
                     this.allSheetTags = await orbDB.getAllSheetTags();
                     this.renderStorageTagsManager();
-                    this.renderTagsFilter('storage');
+                    this.renderTagsFilterStorage();
                 }
             };
             container.appendChild(row);
@@ -335,19 +432,15 @@ const SheetStudio = {
             tCanvas.width = w; tCanvas.height = h;
             const tCtx = tCanvas.getContext('2d');
 
-            // On clone le SVG pour le modifier sans affecter l'affichage réel
             const svgElement = document.getElementById('court-svg');
             const svgClone = svgElement.cloneNode(true);
             
-            // Détection du mode Crab
             const isCrab = document.body.classList.contains('crab-mode') || document.documentElement.classList.contains('crab-mode');
             const primaryColor = isCrab ? '#72243D' : '#BFA98D';
             const secondaryColor = isCrab ? '#F9AB00' : '#212121';
 
-            // 1. On force la couleur de fond (car la librairie PDF ignore les variables CSS)
             svgClone.querySelectorAll('[fill="var(--color-primary)"]').forEach(el => el.setAttribute('fill', primaryColor));
             
-            // 2. On affiche/masque les éléments texte et lignes selon le mode
             const textOrb = svgClone.querySelector('.court-text-orb');
             const textCrab = svgClone.querySelector('.court-text-crab');
             
@@ -557,12 +650,8 @@ const SheetStudio = {
     selectElement(el) { this.deselectAll(); this.selectedElement = el; el.classList.add('selected'); },
     deselectAll() { document.querySelectorAll('.draggable-element').forEach(e => e.classList.remove('selected')); this.selectedElement = null; this.clearGuides(); },
 
-    // ==========================================
-    // SYSTÈME DE LIGNES D'ALIGNEMENT (VISUEL)
-    // ==========================================
-    clearGuides() {
-        document.querySelectorAll('.align-guide').forEach(el => el.remove());
-    },
+    // --- ALIGNEMENT ---
+    clearGuides() { document.querySelectorAll('.align-guide').forEach(el => el.remove()); },
 
     checkAlignment() {
         this.clearGuides();
@@ -574,20 +663,16 @@ const SheetStudio = {
         const activeRect = this.selectedElement.getBoundingClientRect();
         const pageRect = page.getBoundingClientRect();
         
-        // Coordonnées relatives à la page
         const relRect = {
-            left: activeRect.left - pageRect.left,
-            top: activeRect.top - pageRect.top,
-            right: activeRect.right - pageRect.left,
-            bottom: activeRect.bottom - pageRect.top,
+            left: activeRect.left - pageRect.left, top: activeRect.top - pageRect.top,
+            right: activeRect.right - pageRect.left, bottom: activeRect.bottom - pageRect.top,
             centerX: (activeRect.left - pageRect.left) + (activeRect.width / 2),
             centerY: (activeRect.top - pageRect.top) + (activeRect.height / 2),
-            width: activeRect.width,
-            height: activeRect.height
+            width: activeRect.width, height: activeRect.height
         };
 
         const siblings = Array.from(page.querySelectorAll('.draggable-element')).filter(el => el !== this.selectedElement);
-        const tolerance = 4; // Sensibilité visuelle (en pixels)
+        const tolerance = 4;
 
         const drawGuide = (type, pos) => {
             const guide = document.createElement('div');
@@ -597,19 +682,14 @@ const SheetStudio = {
             page.appendChild(guide);
         };
 
-        let matchedV = new Set();
-        let matchedH = new Set();
+        let matchedV = new Set(); let matchedH = new Set();
 
         const checkV = (val) => {
             if (matchedV.has(val)) return;
-            // Centre de la page
             if (Math.abs(val - 397) < tolerance) { drawGuide('v', 397); matchedV.add(val); return; }
-            
             siblings.forEach(sib => {
                 const sRect = sib.getBoundingClientRect();
-                const sl = sRect.left - pageRect.left;
-                const sr = sRect.right - pageRect.left;
-                const scx = sl + sRect.width / 2;
+                const sl = sRect.left - pageRect.left; const sr = sRect.right - pageRect.left; const scx = sl + sRect.width / 2;
                 if (Math.abs(val - sl) < tolerance || Math.abs(val - sr) < tolerance || Math.abs(val - scx) < tolerance) {
                     drawGuide('v', val); matchedV.add(val);
                 }
@@ -618,14 +698,10 @@ const SheetStudio = {
 
         const checkH = (val) => {
             if (matchedH.has(val)) return;
-            // Centre de la page
             if (Math.abs(val - 561.5) < tolerance) { drawGuide('h', 561.5); matchedH.add(val); return; }
-
             siblings.forEach(sib => {
                 const sRect = sib.getBoundingClientRect();
-                const st = sRect.top - pageRect.top;
-                const sb = sRect.bottom - pageRect.top;
-                const scy = st + sRect.height / 2;
+                const st = sRect.top - pageRect.top; const sb = sRect.bottom - pageRect.top; const scy = st + sRect.height / 2;
                 if (Math.abs(val - st) < tolerance || Math.abs(val - sb) < tolerance || Math.abs(val - scy) < tolerance) {
                     drawGuide('h', val); matchedH.add(val);
                 }
@@ -636,7 +712,7 @@ const SheetStudio = {
         checkH(relRect.top); checkH(relRect.bottom); checkH(relRect.centerY);
     },
 
-    // --- SOURIS (DRAG & RESIZE) ---
+    // --- RESIZE & DRAG ---
     initResize(e, el, mode) {
         e.stopPropagation(); this.selectElement(el);
         this.isResizing = true; this.resizeMode = mode;
@@ -660,7 +736,7 @@ const SheetStudio = {
                 const pageRect = this.selectedElement.parentElement.getBoundingClientRect();
                 this.selectedElement.style.left = `${e.clientX - pageRect.left - this.offsetX}px`;
                 this.selectedElement.style.top = `${e.clientY - pageRect.top - this.offsetY}px`;
-                this.checkAlignment(); // Affiche les lignes
+                this.checkAlignment();
             }
         } 
         else if (this.isResizing && this.selectedElement) {
@@ -695,14 +771,14 @@ const SheetStudio = {
                 this.selectedElement.style.top = (this.startTop + actualDy) + 'px';
                 if (img) img.style.top = (this.startImgY - actualDy) + 'px';
             }
-            this.checkAlignment(); // Affiche les lignes
+            this.checkAlignment();
         }
     },
     
     onMouseUp() { 
         if(this.isDragging || this.isResizing) this.commitState(); 
         this.isDragging = false; this.isResizing = false; 
-        this.clearGuides(); // Nettoie les lignes quand on lâche
+        this.clearGuides();
     },
 
     formatText(action) {

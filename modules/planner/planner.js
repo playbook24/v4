@@ -1,12 +1,20 @@
 /**
  * modules/planner/planner.js
- * V4 - Planificateur Pleine Page avec Tags connectés à la Bibliothèque
+ * V5 - Planificateur avec Navigation par Dossiers
  */
 const PlannerModule = {
     currentPlan: { id: null, name: '', notes: '', playbookIds: [] },
     allPlaybooks: [],
-    allTags: [], // NOUVEAU: Stocke les vrais tags de la BDD
-    currentTagId: null, // NOUVEAU: Filtre par ID de tag
+    allTags: [], 
+    allFolders: [],
+    
+    libViewMode: 'FOLDERS', // 'FOLDERS' ou 'PLAYBOOKS'
+    currentFolderId: null,
+    currentTagId: null,
+
+    // Icônes SVG
+    iconFolder: `<svg viewBox="0 0 24 24" style="width:30px;height:30px;fill:var(--color-primary);"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>`,
+    iconAll: `<svg viewBox="0 0 24 24" style="width:30px;height:30px;fill:var(--color-primary);"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H8V4H20V16Z"/></svg>`,
 
     async init() {
         this.cacheDOM();
@@ -23,13 +31,26 @@ const PlannerModule = {
         this.selectorList = document.getElementById('plan-selector-list');
         this.planList = document.getElementById('plan-playbooks-list');
         this.exoCount = document.getElementById('exo-count');
+        
+        this.libTitle = document.getElementById('planner-lib-title');
+        this.btnLibBack = document.getElementById('btn-planner-lib-back');
         this.filterContainer = document.getElementById('plan-selector-filters');
+        this.searchInput = document.getElementById('plan-selector-search');
     },
 
     bindEvents() {
         document.getElementById('plan-editor-cancel-btn').onclick = () => this.closeEditor();
         document.getElementById('plan-editor-save-btn').onclick = () => this.savePlan();
-        document.getElementById('plan-selector-search').oninput = (e) => this.renderSelector(e.target.value);
+        
+        this.btnLibBack.onclick = () => {
+            this.libViewMode = 'FOLDERS';
+            this.currentFolderId = null;
+            this.currentTagId = null;
+            this.searchInput.value = '';
+            this.renderLibView();
+        };
+
+        this.searchInput.oninput = (e) => this.renderLibPlaybooks(e.target.value);
     },
 
     async loadGrid() {
@@ -67,96 +88,142 @@ const PlannerModule = {
     },
 
     async openEditor(plan = null) {
-        // CHARGE LES EXERCICES ET LES TAGS DE LA BIBLIOTHÈQUE
-        this.allPlaybooks = await orbDB.getAllPlaybooks();
-        this.allTags = await orbDB.getAllTags();
+        // CHARGE TOUT
+        [this.allPlaybooks, this.allTags, this.allFolders] = await Promise.all([
+            orbDB.getAllPlaybooks(), orbDB.getAllTags(), orbDB.getAllFolders()
+        ]);
         
         this.currentPlan = plan ? { ...plan } : { id: null, name: '', notes: '', playbookIds: [] };
         
-        const titleSpan = document.getElementById('editor-main-title');
-        titleSpan.innerHTML = plan ? `ÉDITION <span class="highlight">SÉANCE</span>` : `NOUVELLE <span class="highlight">SÉANCE</span>`;
-
+        document.getElementById('editor-main-title').innerHTML = plan ? `ÉDITION <span class="highlight">SÉANCE</span>` : `NOUVELLE <span class="highlight">SÉANCE</span>`;
         document.getElementById('plan-editor-name').value = this.currentPlan.name;
         document.getElementById('plan-editor-notes').value = this.currentPlan.notes;
         
-        this.currentTagId = null; 
-        this.renderTags(); 
-        this.renderSelector();
         this.renderPlanExos();
+
+        // Réinitialise la bibliothèque à droite
+        this.libViewMode = 'FOLDERS';
+        this.currentFolderId = null;
+        this.currentTagId = null;
+        this.searchInput.value = '';
+        this.renderLibView();
         
         this.mainView.classList.add('hidden');
         this.editorView.classList.remove('hidden');
         window.scrollTo(0, 0);
     },
 
-    // AFFICHE LES TAGS CRÉÉS DANS LA BIBLIOTHÈQUE
-    renderTags() {
-        if (!this.filterContainer) return;
+    // --- NAVIGATION DANS LA BIBLIOTHÈQUE ---
+    renderLibView() {
+        if (this.libViewMode === 'FOLDERS') {
+            this.renderLibFolders();
+        } else {
+            this.renderLibPlaybooks(this.searchInput.value);
+        }
+    },
+
+    renderLibFolders() {
+        this.libTitle.textContent = "Dossiers";
+        this.btnLibBack.classList.add('hidden');
+        this.filterContainer.classList.add('hidden');
+        this.searchInput.classList.add('hidden');
+        this.selectorList.innerHTML = '';
+
+        // Dossier: Tous
+        const allItem = document.createElement('div');
+        allItem.className = 'selector-item';
+        allItem.innerHTML = `
+            <div style="width:70px; height:50px; background:rgba(255,255,255,0.05); border-radius:6px; display:flex; align-items:center; justify-content:center;">${this.iconAll}</div>
+            <div class="selector-item-content">
+                <span class="selector-item-title">Tous les schémas</span>
+                <span class="selector-item-add" style="color:var(--color-text); opacity:0.6; text-transform:none;">${this.allPlaybooks.length} exos</span>
+            </div>`;
+        allItem.onclick = () => { this.libViewMode = 'PLAYBOOKS'; this.currentFolderId = 'ALL'; this.renderLibView(); };
+        this.selectorList.appendChild(allItem);
+
+        // Dossiers créés
+        this.allFolders.forEach(folder => {
+            const count = this.allPlaybooks.filter(pb => pb.folderIds && pb.folderIds.includes(folder.id)).length;
+            const item = document.createElement('div');
+            item.className = 'selector-item';
+            item.innerHTML = `
+                <div style="width:70px; height:50px; background:rgba(255,255,255,0.05); border-radius:6px; display:flex; align-items:center; justify-content:center;">${this.iconFolder}</div>
+                <div class="selector-item-content">
+                    <span class="selector-item-title">${folder.name}</span>
+                    <span class="selector-item-add" style="color:var(--color-text); opacity:0.6; text-transform:none;">${count} exos</span>
+                </div>`;
+            item.onclick = () => { this.libViewMode = 'PLAYBOOKS'; this.currentFolderId = folder.id; this.libTitle.textContent = folder.name; this.renderLibView(); };
+            this.selectorList.appendChild(item);
+        });
+    },
+
+    renderLibPlaybooks(filterText = '') {
+        this.btnLibBack.classList.remove('hidden');
+        this.filterContainer.classList.remove('hidden');
+        this.searchInput.classList.remove('hidden');
+        this.selectorList.innerHTML = '';
+
+        // 1. Génération des Tags Spécifiques au dossier
         this.filterContainer.innerHTML = '';
-        
         const btnAll = document.createElement('button');
         btnAll.className = `tag-filter-btn ${this.currentTagId === null ? 'active' : ''}`;
         btnAll.textContent = 'Tous';
-        btnAll.onclick = () => {
-            this.currentTagId = null;
-            this.renderTags(); 
-            this.renderSelector(document.getElementById('plan-selector-search').value);
-        };
+        btnAll.onclick = () => { this.currentTagId = null; this.renderLibPlaybooks(this.searchInput.value); };
         this.filterContainer.appendChild(btnAll);
 
-        // Ajoute un bouton pour chaque tag existant en BDD
-        this.allTags.forEach(tag => {
+        let fId = (typeof this.currentFolderId === 'number') ? this.currentFolderId : null;
+        const currentTags = this.allTags.filter(t => t.folderId == fId);
+        currentTags.forEach(tag => {
             const btn = document.createElement('button');
             btn.className = `tag-filter-btn ${this.currentTagId === tag.id ? 'active' : ''}`;
             btn.textContent = tag.name;
-            btn.onclick = () => {
-                this.currentTagId = this.currentTagId === tag.id ? null : tag.id; 
-                this.renderTags();
-                this.renderSelector(document.getElementById('plan-selector-search').value);
-            };
+            btn.onclick = () => { this.currentTagId = this.currentTagId === tag.id ? null : tag.id; this.renderLibPlaybooks(this.searchInput.value); };
             this.filterContainer.appendChild(btn);
         });
-    },
 
-    renderSelector(filterText = '') {
-        this.selectorList.innerHTML = '';
-        this.allPlaybooks
-            .filter(pb => {
-                const searchLower = filterText.toLowerCase();
-                const nameMatch = (pb.name || '').toLowerCase().includes(searchLower);
-                
-                // Vérifie si l'exercice possède le tag cliqué
-                let tagMatch = true;
-                if (this.currentTagId !== null) {
-                    tagMatch = pb.tagIds && pb.tagIds.includes(this.currentTagId);
-                }
-                
-                return nameMatch && tagMatch;
-            })
-            .forEach(pb => {
-                const item = document.createElement('div');
-                item.className = 'selector-item';
-                
-                let previewUrl = '';
-                if (pb.preview instanceof Blob) {
-                    try { previewUrl = URL.createObjectURL(pb.preview); } catch(e){}
-                }
+        // 2. Filtrage des Playbooks
+        let filtered = this.allPlaybooks;
+        if (this.currentFolderId !== 'ALL') {
+            filtered = filtered.filter(pb => pb.folderIds && pb.folderIds.includes(this.currentFolderId));
+        }
+        if (this.currentTagId !== null) {
+            filtered = filtered.filter(pb => pb.tagIds && pb.tagIds.includes(this.currentTagId));
+        }
 
-                item.innerHTML = `
-                    ${previewUrl ? `<img src="${previewUrl}" alt="Aperçu">` : `<div style="width:80px; height:50px; background:var(--color-background); border:1px solid var(--color-border); border-radius:6px;"></div>`}
-                    <div class="selector-item-content">
-                        <span class="selector-item-title">${pb.name || 'Sans nom'}</span>
-                        <span class="selector-item-add">+ Ajouter à la séance</span>
-                    </div>
-                `;
-                item.onclick = () => {
-                    this.currentPlan.playbookIds.push(pb.id);
-                    this.renderPlanExos();
-                };
-                this.selectorList.appendChild(item);
+        const searchLower = filterText.toLowerCase();
+        filtered = filtered.filter(pb => (pb.name || '').toLowerCase().includes(searchLower));
+
+        if (filtered.length === 0) {
+            this.selectorList.innerHTML = '<p style="text-align:center; opacity:0.5; padding:20px;">Aucun exercice trouvé.</p>';
+            return;
+        }
+
+        // 3. Affichage
+        filtered.reverse().forEach(pb => {
+            const item = document.createElement('div');
+            item.className = 'selector-item';
+            
+            let previewUrl = '';
+            if (pb.preview instanceof Blob) {
+                try { previewUrl = URL.createObjectURL(pb.preview); } catch(e){}
+            }
+
+            item.innerHTML = `
+                ${previewUrl ? `<img src="${previewUrl}" alt="Aperçu">` : `<div style="width:80px; height:50px; background:var(--color-background); border:1px solid var(--color-border); border-radius:6px;"></div>`}
+                <div class="selector-item-content">
+                    <span class="selector-item-title">${pb.name || 'Sans nom'}</span>
+                    <span class="selector-item-add">+ Ajouter à la séance</span>
+                </div>
+            `;
+            item.onclick = () => {
+                this.currentPlan.playbookIds.push(pb.id);
+                this.renderPlanExos();
+            };
+            this.selectorList.appendChild(item);
         });
     },
 
+    // --- GESTION DE LA SÉANCE ---
     renderPlanExos() {
         this.planList.innerHTML = '';
         this.exoCount.textContent = this.currentPlan.playbookIds.length;
@@ -165,7 +232,7 @@ const PlannerModule = {
             this.planList.innerHTML = `
                 <li style="opacity: 0.6; font-style: italic; border: 2px dashed var(--color-border); background: transparent; justify-content:center; padding: 40px; border-radius:12px; display:flex; flex-direction:column; align-items:center; gap:10px;">
                     <svg viewBox="0 0 24 24" style="width:40px; fill:var(--color-primary);"><path d="M13 19C13 15.69 15.69 13 19 13C20.1 13 21.12 13.3 22 13.81V6C22 4.89 21.1 4 20 4H4C2.89 4 2 4.89 2 6V18C2 19.11 2.9 20 4 20H13.09C13.04 19.67 13 19.34 13 19M4 18V6H20V11.81C19.68 11.66 19.35 11.53 19 11.43V8H5V18H13.09C13.3 18.67 13.58 19.3 13.93 19.87L13.81 20H4M18 15V18H15V20H18V23H20V20H23V18H20V15H18Z" /></svg>
-                    Piochez des exercices dans la bibliothèque à droite pour construire votre séance.
+                    Piochez des exercices dans la bibliothèque à droite.
                 </li>`;
             return;
         }
@@ -208,7 +275,6 @@ const PlannerModule = {
                     this.renderPlanExos(); 
                 }
             };
-
             this.planList.appendChild(li);
         });
     },
@@ -230,11 +296,11 @@ const PlannerModule = {
                 planToSave.id = this.currentPlan.id;
             }
 
-            const savedId = await orbDB.savePlan(planToSave, this.currentPlan.id);
+            await orbDB.savePlan(planToSave, this.currentPlan.id);
             this.closeEditor();
             this.loadGrid();
         } catch (error) {
-            console.error("Erreur de sauvegarde de la séance:", error);
+            console.error("Erreur de sauvegarde:", error);
             alert("Erreur technique lors de la sauvegarde.");
         }
     },

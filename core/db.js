@@ -1,6 +1,6 @@
 /**
  * core/db.js
- * VERSION V4 Finale - Base de données avec synchronisation Google Drive et gestion Base64
+ * VERSION V5 - Ajout du système de Dossiers et Tags spécifiques
  */
 
 class ORBDatabase {
@@ -12,7 +12,7 @@ class ORBDatabase {
     async open() {
         return new Promise((resolve, reject) => {
             if (this.db) { resolve(this.db); return; }
-            const request = indexedDB.open(this.dbName, 8); 
+            const request = indexedDB.open(this.dbName, 9); 
             request.onerror = (e) => { console.error("Erreur d'ouverture BDD", e); reject("Erreur BDD"); };
             request.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
             request.onupgradeneeded = (e) => {
@@ -25,23 +25,17 @@ class ORBDatabase {
                 if (!db.objectStoreNames.contains('teams')) db.createObjectStore('teams', { keyPath: 'id', autoIncrement: true });
                 if (!db.objectStoreNames.contains('sheets')) db.createObjectStore('sheets', { keyPath: 'id', autoIncrement: true });
                 if (!db.objectStoreNames.contains('sheetTags')) db.createObjectStore('sheetTags', { keyPath: 'id', autoIncrement: true });
+                if (!db.objectStoreNames.contains('folders')) db.createObjectStore('folders', { keyPath: 'id', autoIncrement: true });
             };
         });
     }
 
-    // --- FONCTION DE SYNCHRONISATION (Appelée après chaque modification) ---
     _triggerSync() {
         if (typeof ORBSync !== 'undefined' && ORBSync.accessToken) { 
-            // Anti-Spam : On attend 2 secondes après la dernière modification pour tout envoyer d'un coup
-            if (this.syncTimeout) clearTimeout(this.syncTimeout);
-            this.syncTimeout = setTimeout(() => {
-                console.log("☁️ Auto-sauvegarde Drive en cours...");
-                ORBSync.uploadToDrive(); 
-            }, 2000);
+            ORBSync.uploadToDrive(); 
         }
     }
 
-    // --- FONCTION UTILITAIRE (Convertit le Base64 en Fichier Image) ---
     _base64ToBlob(dataURI) {
         if (!dataURI || typeof dataURI !== 'string' || !dataURI.startsWith('data:image')) return dataURI;
         try {
@@ -54,21 +48,34 @@ class ORBDatabase {
         } catch(e) { return null; }
     }
 
+    // --- DOSSIERS (FOLDERS) ---
+    async getAllFolders() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['folders'], 'readonly').objectStore('folders').getAll().onsuccess = e => res(e.target.result); }); }
+    async addFolder(name) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['folders'], 'readwrite').objectStore('folders').add({name}); req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; req.onerror = e => rej(e);}); }
+    async deleteFolder(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['folders'], 'readwrite').objectStore('folders').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
+
     // --- PLAYBOOKS ---
     async savePlaybook(data, preview, id = null) { 
         if (!this.db) await this.open(); 
         let existingTagIds = [];
+        let existingFolderIds = [];
         let createdAt = new Date().toISOString();
         if (id) {
             try {
                 const existing = await this.getPlaybook(id, true);
-                if (existing) { existingTagIds = existing.tagIds || []; createdAt = existing.createdAt || createdAt; }
+                if (existing) { 
+                    existingTagIds = existing.tagIds || []; 
+                    existingFolderIds = existing.folderIds || []; 
+                    createdAt = existing.createdAt || createdAt; 
+                }
             } catch(e) {}
-        } else if (data.tagIds) { existingTagIds = data.tagIds; }
+        } else {
+            if (data.tagIds) existingTagIds = data.tagIds; 
+            if (data.folderIds) existingFolderIds = data.folderIds; 
+        }
 
         return new Promise((res) => { 
             const s = this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks'); 
-            const r = { name: data.name || 'Sans nom', playbookData: data, preview: preview, createdAt: createdAt, tagIds: existingTagIds }; 
+            const r = { name: data.name || 'Sans nom', playbookData: data, preview: preview, createdAt: createdAt, tagIds: existingTagIds, folderIds: existingFolderIds }; 
             if (id) r.id = id; 
             const req = id ? s.put(r) : s.add(r); 
             req.onsuccess = e => { 
@@ -84,7 +91,6 @@ class ORBDatabase {
             this.db.transaction(['playbooks'], 'readonly').objectStore('playbooks').getAll().onsuccess = e => {
                 let results = e.target.result || [];
                 if (!raw) {
-                    // 🟢 NOUVEAU : On clone l'objet pour ne pas casser la base locale
                     results = results.map(pb => {
                         let pbCopy = { ...pb };
                         if (pbCopy.preview && typeof pbCopy.preview === 'string') {
@@ -105,7 +111,6 @@ class ORBDatabase {
                 let pb = e.target.result;
                 if (!pb) return res(null);
                 
-                // 🟢 NOUVEAU : On clone l'objet ici aussi
                 let pbCopy = { ...pb };
                 if (!raw && pbCopy.preview && typeof pbCopy.preview === 'string') {
                     pbCopy.preview = this._base64ToBlob(pbCopy.preview);
@@ -143,9 +148,12 @@ class ORBDatabase {
 
     // --- TAGS ---
     async getAllTags() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['tags'], 'readonly').objectStore('tags').getAll().onsuccess = e => res(e.target.result); }); }
-    async addTag(name) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['tags'], 'readwrite').objectStore('tags').add({name}); req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; req.onerror = e => rej(e);}); }
+    // 🟢 NOUVEAU : Ajout de folderId
+    async addTag(name, folderId = null) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['tags'], 'readwrite').objectStore('tags').add({name, folderId}); req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; req.onerror = e => rej(e);}); }
     async deleteTag(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['tags'], 'readwrite').objectStore('tags').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
+    
     async assignTagsToPlaybook(playbookId, tagIds) { if (!this.db) await this.open(); return new Promise(async (res, rej) => { const playbook = await this.getPlaybook(playbookId, true); if (!playbook) return rej("Introuvable"); playbook.tagIds = tagIds; this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').put(playbook).onsuccess = () => { this._triggerSync(); res(true); }; }); }
+    async assignFoldersToPlaybook(playbookId, folderIds) { if (!this.db) await this.open(); return new Promise(async (res, rej) => { const playbook = await this.getPlaybook(playbookId, true); if (!playbook) return rej("Introuvable"); playbook.folderIds = folderIds; this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').put(playbook).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 
     // --- CALENDRIER ---
     async saveCalendarEvent(data) {

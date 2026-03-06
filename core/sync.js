@@ -53,7 +53,7 @@ const ORBSync = {
             toast.style.transition = 'all 0.3s ease';
             toast.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
             toast.style.opacity = '0';
-            toast.style.pointerEvents = 'none'; // Pour pouvoir cliquer au travers
+            toast.style.pointerEvents = 'none'; 
             document.body.appendChild(toast);
         }
         toast.innerHTML = message;
@@ -73,7 +73,6 @@ const ORBSync = {
     },
 
     init: async function() {
-        // On s'assure que Google est là, même si on n'est pas sur la page d'accueil
         await this.injectGoogleScripts();
 
         this.tokenClient = google.accounts.oauth2.initTokenClient({
@@ -210,13 +209,14 @@ const ORBSync = {
         if (!this.fileId) return false;
 
         try {
-            // Affichage de la petite pop-up
             this.showToast("☁️ Sauvegarde en cours...");
 
+            // 🟢 NOUVEAU : Ajout de "folders" à la sauvegarde
             const backupData = {
                 playbooks: await orbDB.getAllPlaybooks(true),
                 trainingPlans: await orbDB.getAllPlans(),
                 tags: await orbDB.getAllTags(),
+                folders: await orbDB.getAllFolders(), // <-- ICI
                 calendarEvents: await orbDB.getAllCalendarEvents(),
                 players: await orbDB.getAllPlayers(),
                 teams: await orbDB.getAllTeams(),
@@ -237,10 +237,8 @@ const ORBSync = {
                 body: form
             });
             
-            // Pop-up passe en succès
             this.showToast("✅ Sauvegardé sur Drive !", true);
             
-            // On met aussi à jour le bouton d'accueil si l'utilisateur y est
             const pushBtn = document.getElementById('btn-drive-push');
             if (pushBtn) {
                 let oldText = pushBtn.innerHTML;
@@ -281,7 +279,8 @@ const ORBSync = {
             const data = response.result;
             
             if (data && typeof data === 'object') {
-                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
+                // 🟢 NOUVEAU : Ajout de "folders" dans la transaction de restauration
+                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
                 
                 const clearAndAdd = (storeName, items) => {
                     const store = tx.objectStore(storeName);
@@ -292,6 +291,7 @@ const ORBSync = {
                 clearAndAdd('playbooks', data.playbooks);
                 clearAndAdd('trainingPlans', data.trainingPlans);
                 clearAndAdd('tags', data.tags);
+                clearAndAdd('folders', data.folders); // <-- ICI
                 clearAndAdd('calendarEvents', data.calendarEvents);
                 clearAndAdd('players', data.players);
                 clearAndAdd('teams', data.teams);
