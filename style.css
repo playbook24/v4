@@ -265,12 +265,281 @@ body.light-mode .app-header a {
         padding: 15px;
     }
 }
+
+/**
+ * style.css
+ * V4 - IDENTITÉ VISUELLE PREMIUM (NOIR & OR)
+ * Structure globale, Grille, et Tailles d'icônes
+ */
+
+@import url('[https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap)');
+
+:root {
+    /* --- POLICES --- */
+    --font-title: 'Anton', sans-serif;
+    --font-body: 'Montserrat', sans-serif;
+
+    /* --- L'OR D'ORIGINE --- */
+    --color-primary: #BFA98D; 
+    --color-primary-hover: #d1bc9f; 
+    
+    /* --- THÈME SOMBRE (Par défaut) --- */
+    --color-secondary: #121212; /* Noir du Header */
+    --color-background: #1a1a1a; /* Fond de page */
+    --color-container: #242424; /* Fond des cartes */
+    --color-border: #383838; /* Lignes séparatrices */
+    
+    /* --- TEXTES --- */
+    --color-text: #F5F5F5; 
+    --color-text-muted: #aaaaaa;
+    --color-text-on-dark: #ffffff; 
+    --color-text-on-gold: #121212; 
+
+    /* --- INPUTS --- */
+    --color-input-background: #2a2a2a;
+    --color-input-border: #444444;
+
+    /* --- OMBRES --- */
+    --shadow-soft: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-lifted: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Base de la page */
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+.hidden { display: none !important; }
+
+/* ==========================================
+   HEADER PRINCIPAL
+   ========================================== */
+.app-header {
+    background-color: var(--color-secondary);
+    padding: 15px 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border-bottom: 1px solid var(--color-border);
+}
+
+h1 {
+    font-family: var(--font-title);
+    margin: 0; letter-spacing: 2px; font-size: 2em;
+    text-transform: uppercase; color: var(--color-text-on-dark);
+}
+h1 span.highlight, h1 span { color: var(--color-primary); }
+
+/* ==========================================
+   GRILLE DU DASHBOARD & CARTES (FIX ORGANISATION)
+   ========================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.nav-card {
+    background: var(--color-container);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--color-text);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.2s, border-color 0.2s;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lifted);
+    border-color: var(--color-primary);
+}
+
+/* FIX DES ICÔNES GÉANTES */
+.nav-card svg {
+    width: 45px !important;
+    height: 45px !important;
+    margin-bottom: 15px;
+    fill: var(--color-primary);
+    transition: transform 0.2s;
+}
+.nav-card:hover svg { transform: scale(1.1); }
+
+.nav-card span { font-size: 1.1em; font-weight: 600; }
+
+/* Carte de Backup (Coupée en 2) */
+.split-card { flex-direction: row; padding: 0; overflow: hidden; cursor: default; }
+.split-card:hover { border-color: var(--color-border); transform: none;}
+
+.split-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: transparent; border: none; padding: 20px 10px; cursor: pointer; color: var(--color-text);
+    transition: background-color 0.2s;
+}
+.split-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
+.split-btn svg { width: 36px !important; height: 36px !important; margin-bottom: 10px; }
+.split-btn span { font-weight: bold; font-size: 1em; }
+.split-divider { width: 1px; background-color: var(--color-border); }
+
+
+/* ==========================================
+   BOUTONS, ICONES ET FORMULAIRES GLOBAUX
+   ========================================== */
+button { font-family: var(--font-body); outline: none; }
+
+.btn-primary {
+    background-color: var(--color-primary); color: var(--color-text-on-gold);
+    border: none; border-radius: 8px; font-weight: 600; padding: 10px 16px;
+    cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:hover { background-color: var(--color-primary-hover); transform: translateY(-2px); }
+
+.btn-icon {
+    display: inline-flex; justify-content: center; align-items: center;
+    background: transparent; border: none; color: var(--color-text); cursor: pointer;
+    padding: 8px; border-radius: 8px; transition: all 0.2s; text-decoration: none;
+}
+/* TAILLE STRICTE POUR LES ICONES DE HEADER */
+.btn-icon svg { width: 24px !important; height: 24px !important; fill: currentColor; }
+.btn-icon:hover { background-color: var(--color-container); color: var(--color-primary); }
+
+input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea, select {
+    background-color: var(--color-input-background); color: var(--color-text);
+    border: 1px solid var(--color-input-border); border-radius: 6px; padding: 8px 12px;
+    font-family: var(--font-body); font-size: 0.95em; transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--color-primary); outline: none; }
+
+.section-container {
+    background: var(--color-container); border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 20px; box-shadow: var(--shadow-soft); margin-bottom: 20px;
+}
+.section-container h2, .section-container h3 {
+    margin-top: 0; color: var(--color-primary); border-bottom: 1px solid var(--color-border);
+    padding-bottom: 10px; margin-bottom: 15px;
+}
+
+.danger { color: var(--color-primary) !important; border-color: var(--color-primary) !important; }
+button.danger { background: transparent; border: 1px solid var(--color-primary); transition: all 0.2s; }
+button.danger:hover { background: rgba(191, 169, 141, 0.1); } /* Effet de survol avec un fond or léger */
+
+/* ==========================================
+   MODE CLAIR (LIGHT MODE)
+   ========================================== */
+body.light-mode {
+    --color-background: #F5F5F5;
+    --color-container: #ffffff;
+    --color-border: #e0e0e0;
+    --color-text: #212121;
+    --color-text-muted: #666666;
+    --color-input-background: #ffffff;
+    --color-input-border: #cccccc;
+    --shadow-soft: 0 4px 12px rgba(0,0,0,0.07);
+    --shadow-lifted: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+/* Ajustements visuels spécifiques au mode clair */
+body.light-mode h1 { color: #ffffff; } /* Le titre du header reste lisible */
+body.light-mode .nav-card { border-color: #dcdcdc; }
+body.light-mode .split-btn:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+/* ==========================================
+   MODE CRAB (THÈME ÉQUIPE)
+   ========================================== */
+body.crab-mode {
+    --color-primary: #72243D; /* Bordeaux */
+    --color-primary-hover: #8e2d4c;
+    --color-secondary: #F9AB00; /* Jaune/Or */
+    --color-text-on-gold: #ffffff;
+}
+
+body.crab-mode .app-header {
+    background-color: var(--color-secondary);
+}
+
+body.crab-mode h1 {
+    color: #212121; /* Texte noir sur fond jaune */
+}
+
+body.crab-mode h1 span.highlight {
+    color: var(--color-primary); /* Le "Tactical Board" en bordeaux */
+}
+/* ==========================================
+   TERRAIN (COURT SVG) - ADAPTATION MODE CRAB
+   ========================================== */
+/* Cache le texte "CRAB" par défaut */
+.court-text-crab {
+    display: none;
+}
+
+/* En mode Crab : lignes jaunes, cache "ORB", affiche "CRAB" en jaune */
+body.crab-mode .court-lines {
+    stroke: var(--color-secondary) !important;
+}
+body.crab-mode .court-text-orb {
+    display: none;
+}
+body.crab-mode .court-text-crab {
+    display: block !important;
+    fill: var(--color-secondary) !important;
+}
+
+/* ==========================================
+   CORRECTION BOUTON RETOUR ET HEADER (MODE CLAIR)
+   ========================================== */
+/* Couleur blanche par défaut (Mode sombre) */
+.header-back-btn {
+    color: var(--color-text-on-dark);
+}
+
+/* En Mode clair : Force la flèche et les titres du Header à devenir foncés pour être lisibles */
+body.light-mode .header-back-btn,
+body.light-mode .app-header h1,
+body.light-mode .app-header a {
+    color: var(--color-text) !important;
+}
+/* RESPONSIVE GLOBAL */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* 1 seule colonne sur mobile */
+        padding: 0 10px;
+    }
+    .app-header h1 {
+        font-size: 1.5em; /* Titre plus petit */
+    }
+    .split-card {
+        flex-direction: column; /* Les boutons save/restore s'empilent */
+    }
+    .split-divider {
+        width: 100%;
+        height: 1px;
+    }
+    .modal-content {
+        width: 95%;
+        padding: 15px;
+    }
+}
 /* --- BOUTONS GOOGLE DRIVE (THÈME NOIR & OR) --- */
+/* NOUVEAU : Remplacement des couleurs fixes par les variables pour s'adapter au mode Crab/Light */
 .drive-main-btn {
     width: 100%;
-    background: #111111;
-    color: #BFA98D;
-    border: 1px solid #BFA98D;
+    background: var(--color-container);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
     padding: 12px;
     border-radius: 8px;
     font-size: 1rem;
@@ -279,8 +548,8 @@ body.light-mode .app-header a {
     transition: all 0.2s ease;
 }
 .drive-main-btn:hover {
-    background: #BFA98D;
-    color: #111111;
+    background: var(--color-primary);
+    color: var(--color-text-on-gold);
 }
 
 .drive-action-btn {
@@ -291,20 +560,20 @@ body.light-mode .app-header a {
     padding: 10px;
     font-size: 0.95rem;
     font-weight: bold;
-    border: 1px solid #333333;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    background: #1a1a1a;
-    color: #aaaaaa;
+    background: var(--color-container);
+    color: var(--color-text-muted);
 }
 .drive-action-btn:hover {
-    border-color: #BFA98D;
-    color: #BFA98D;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 /* Bouton Envoyer & Charger au survol */
 .btn-push:hover, .btn-pull:hover {
-    background: #BFA98D;
-    color: #111111;
+    background: var(--color-primary);
+    color: var(--color-text-on-gold);
 }

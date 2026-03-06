@@ -410,15 +410,77 @@ window.ORB.ui = {
         const btnSaveAsNew = document.getElementById('save-as-new-btn');
         
         if(btnToggleMenu && modal) {
-            btnToggleMenu.onclick = () => {
-                // Adapter les boutons si un exercice est déjà chargé
+            btnToggleMenu.onclick = async () => {
+                // 1. Récupérer toutes les données
+                const folders = await orbDB.getAllFolders();
+                const allTags = await orbDB.getAllTags();
+                const folderSelect = document.getElementById('play-folder-select');
+
+                let initialFolderId = "";
+                let initialTagIds = [];
+
+                // 2. Vérifier si on édite un exercice existant
                 if(window.ORB.appState.currentLoadedPlaybookId) {
                     if(btnSaveLib) btnSaveLib.textContent = "Mettre à jour l'exercice";
                     if(btnSaveAsNew) btnSaveAsNew.style.display = "block";
+                    
+                    try {
+                        const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId, true);
+                        if (original) {
+                           if (original.folderIds && original.folderIds.length) {
+                               initialFolderId = original.folderIds[0];
+                           }
+                           if (original.tagIds) {
+                               initialTagIds = original.tagIds;
+                           }
+                        }
+                    } catch(e) {}
                 } else {
                     if(btnSaveLib) btnSaveLib.textContent = "Enregistrer dans la bibliothèque";
                     if(btnSaveAsNew) btnSaveAsNew.style.display = "none";
                 }
+
+                // 3. Fonction pour mettre à jour les cases à cocher (Tags)
+                const updateTagsDropdown = (selectedFolderId) => {
+                    const tagContainer = document.getElementById('play-tags-container');
+                    if (!tagContainer) return;
+                    
+                    const filteredTags = selectedFolderId ? 
+                        allTags.filter(t => t.folderId == selectedFolderId) : 
+                        allTags;
+                    
+                    if(filteredTags.length === 0) {
+                        tagContainer.innerHTML = '<span style="opacity:0.5; font-size:0.9em; width:100%;">Aucun tag disponible pour ce dossier.</span>';
+                        return;
+                    }
+
+                    tagContainer.innerHTML = filteredTags.map(t => {
+                        const isSelected = initialTagIds.includes(parseInt(t.id)) ? 'checked' : '';
+                        return `
+                        <label style="display:flex; align-items:center; gap:6px; background:var(--color-container); padding:6px 10px; border-radius:20px; border:1px solid var(--color-border); color:var(--color-text); cursor:pointer; font-size:0.85em; transition:0.2s;">
+                            <input type="checkbox" value="${t.id}" class="tag-checkbox" ${isSelected} style="cursor:pointer; accent-color:var(--color-primary);">
+                            ${t.name}
+                        </label>`;
+                    }).join('');
+                };
+
+                // 4. Peupler les dossiers
+                if (folderSelect) {
+                    folderSelect.innerHTML = '<option value="">-- Sélectionner un dossier --</option>' + 
+                        folders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+                    
+                    // Pré-sélectionner le bon dossier si existant
+                    if (initialFolderId) folderSelect.value = initialFolderId;
+                    
+                    // Ajouter l'événement de changement de dossier
+                    folderSelect.onchange = (e) => {
+                        updateTagsDropdown(e.target.value);
+                    };
+                }
+
+                // Initialiser la liste de tags pour le dossier actuellement sélectionné
+                updateTagsDropdown(initialFolderId);
+                
                 modal.classList.remove('hidden');
             };
         }
@@ -431,22 +493,27 @@ window.ORB.ui = {
             const data = JSON.parse(JSON.stringify(window.ORB.playbookState));
             data.name = name;
             
+            // 5. Récupérer le dossier sélectionné et les tags cochés
+            const folderSelect = document.getElementById('play-folder-select');
+            const tagCheckboxes = document.querySelectorAll('#play-tags-container .tag-checkbox:checked');
+            
+            if (folderSelect && folderSelect.value) {
+                data.folderIds = [parseInt(folderSelect.value)];
+            } else {
+                data.folderIds = [];
+            }
+            
+            if (tagCheckboxes && tagCheckboxes.length > 0) {
+                data.tagIds = Array.from(tagCheckboxes).map(cb => parseInt(cb.value));
+            } else {
+                data.tagIds = [];
+            }
+            
             // Si c'est une copie, on met l'ID à null pour forcer la création. Sinon on garde l'ID existant.
             const targetId = isNewCopy ? null : window.ORB.appState.currentLoadedPlaybookId;
 
-            // Si c'est une copie, on veut que le nouveau fichier hérite des tags de l'ancien
-            if (isNewCopy && window.ORB.appState.currentLoadedPlaybookId) {
-                try {
-                    const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId, true);
-                    if (original && original.tagIds) {
-                        data.tagIds = original.tagIds;
-                    }
-                } catch(e) {}
-            }
-            
             window.ORB.renderer.redrawCanvas();
             
-            // 🟢 NOUVEAU (RETOUR A LA MÉTHODE SÉCURE html2canvas MAIS EN BASE64)
             if (typeof html2canvas === 'undefined') {
                 alert("Erreur: la librairie html2canvas n'est pas chargée. Impossible de faire l'aperçu.");
                 return;
@@ -455,8 +522,6 @@ window.ORB.ui = {
             try {
                 // Capture du terrain complet (fond + dessins)
                 const canvas = await html2canvas(document.getElementById('court-container'), { scale: 0.5 });
-                
-                // Transformation directe en texte (Base64)
                 const base64Preview = canvas.toDataURL('image/jpeg', 0.8);
                 
                 // Sauvegarde

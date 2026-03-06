@@ -42,13 +42,20 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Interception des requêtes pour servir depuis le cache (Mode Hors-ligne)
+// Interception des requêtes avec une stratégie "Network First" (Réseau en priorité)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Retourne le cache si trouvé, sinon fait la requête réseau
-        return response || fetch(event.request);
+    fetch(event.request)
+      .then((networkResponse) => {
+        // On a internet : on met à jour le cache silencieusement avec la nouvelle version
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // Pas internet : on sert la version en cache (Mode Hors-ligne)
+        return caches.match(event.request);
       })
   );
 });
