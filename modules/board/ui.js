@@ -437,7 +437,7 @@ window.ORB.ui = {
             // Si c'est une copie, on veut que le nouveau fichier hérite des tags de l'ancien
             if (isNewCopy && window.ORB.appState.currentLoadedPlaybookId) {
                 try {
-                    const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId);
+                    const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId, true);
                     if (original && original.tagIds) {
                         data.tagIds = original.tagIds;
                     }
@@ -445,27 +445,29 @@ window.ORB.ui = {
             }
             
             window.ORB.renderer.redrawCanvas();
-            const w = window.ORB.canvas.width; const h = window.ORB.canvas.height;
-            const tempCanvas = document.createElement('canvas'); tempCanvas.width = w; tempCanvas.height = h;
-            const tCtx = tempCanvas.getContext('2d');
             
-            const svgElement = document.getElementById('court-svg');
-            const xml = new XMLSerializer().serializeToString(svgElement);
-            const svg64 = btoa(unescape(encodeURIComponent(xml)));
-            
-            const img = new Image();
-            img.onload = async () => {
-                tCtx.drawImage(img, 0, 0, w, h); tCtx.drawImage(window.ORB.canvas, 0, 0, w, h);
-                tempCanvas.toBlob(async (blob) => {
-                    try {
-                        const newId = await orbDB.savePlaybook(data, blob, targetId);
-                        window.ORB.appState.currentLoadedPlaybookId = newId; 
-                        alert(isNewCopy ? '✅ Copie sauvegardée avec succès !' : '✅ Exercice mis à jour !');
-                        if(modal) modal.classList.add('hidden');
-                    } catch(e) { alert('Erreur de sauvegarde.'); }
-                }, 'image/jpeg', 0.8);
-            };
-            img.src = 'data:image/svg+xml;base64,' + svg64;
+            // 🟢 NOUVEAU (RETOUR A LA MÉTHODE SÉCURE html2canvas MAIS EN BASE64)
+            if (typeof html2canvas === 'undefined') {
+                alert("Erreur: la librairie html2canvas n'est pas chargée. Impossible de faire l'aperçu.");
+                return;
+            }
+
+            try {
+                // Capture du terrain complet (fond + dessins)
+                const canvas = await html2canvas(document.getElementById('court-container'), { scale: 0.5 });
+                
+                // Transformation directe en texte (Base64)
+                const base64Preview = canvas.toDataURL('image/jpeg', 0.8);
+                
+                // Sauvegarde
+                const newId = await orbDB.savePlaybook(data, base64Preview, targetId);
+                window.ORB.appState.currentLoadedPlaybookId = newId; 
+                alert(isNewCopy ? '✅ Copie sauvegardée avec succès !' : '✅ Exercice mis à jour !');
+                if(modal) modal.classList.add('hidden');
+            } catch (err) {
+                 console.error(err);
+                 alert("Erreur lors de la création de l'aperçu.");
+            }
         };
 
         if(btnSaveLib) btnSaveLib.onclick = () => executeSave(false);
@@ -483,7 +485,7 @@ window.ORB.ui = {
                 // Intégrer les tags existants dans l'export JSON
                 if (window.ORB.appState.currentLoadedPlaybookId) {
                      try {
-                        const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId);
+                        const original = await orbDB.getPlaybook(window.ORB.appState.currentLoadedPlaybookId, true);
                         if (original && original.tagIds) {
                             data.tagIds = original.tagIds;
                         }

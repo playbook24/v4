@@ -1,6 +1,6 @@
 /**
  * core/db.js
- * VERSION V4 Finale - Base de données avec suppression d'équipe
+ * VERSION V4 Finale - Base de données avec synchronisation Google Drive et gestion Base64
  */
 
 class ORBDatabase {
@@ -29,6 +29,31 @@ class ORBDatabase {
         });
     }
 
+    // --- FONCTION DE SYNCHRONISATION (Appelée après chaque modification) ---
+    _triggerSync() {
+        if (typeof ORBSync !== 'undefined' && ORBSync.accessToken) { 
+            // Anti-Spam : On attend 2 secondes après la dernière modification pour tout envoyer d'un coup
+            if (this.syncTimeout) clearTimeout(this.syncTimeout);
+            this.syncTimeout = setTimeout(() => {
+                console.log("☁️ Auto-sauvegarde Drive en cours...");
+                ORBSync.uploadToDrive(); 
+            }, 2000);
+        }
+    }
+
+    // --- FONCTION UTILITAIRE (Convertit le Base64 en Fichier Image) ---
+    _base64ToBlob(dataURI) {
+        if (!dataURI || typeof dataURI !== 'string' || !dataURI.startsWith('data:image')) return dataURI;
+        try {
+            const byteString = atob(dataURI.split(',')[1]);
+            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+            return new Blob([ab], {type: mimeString});
+        } catch(e) { return null; }
+    }
+
     // --- PLAYBOOKS ---
     async savePlaybook(data, preview, id = null) { 
         if (!this.db) await this.open(); 
@@ -36,7 +61,7 @@ class ORBDatabase {
         let createdAt = new Date().toISOString();
         if (id) {
             try {
-                const existing = await this.getPlaybook(id);
+                const existing = await this.getPlaybook(id, true);
                 if (existing) { existingTagIds = existing.tagIds || []; createdAt = existing.createdAt || createdAt; }
             } catch(e) {}
         } else if (data.tagIds) { existingTagIds = data.tagIds; }
@@ -46,12 +71,59 @@ class ORBDatabase {
             const r = { name: data.name || 'Sans nom', playbookData: data, preview: preview, createdAt: createdAt, tagIds: existingTagIds }; 
             if (id) r.id = id; 
             const req = id ? s.put(r) : s.add(r); 
-            req.onsuccess = e => res(e.target.result); 
+            req.onsuccess = e => { 
+                this._triggerSync(); 
+                res(e.target.result); 
+            }; 
         }); 
     }
-    async getAllPlaybooks() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['playbooks'], 'readonly').objectStore('playbooks').getAll().onsuccess = e => res(e.target.result); }); }
-    async getPlaybook(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['playbooks'], 'readonly').objectStore('playbooks').get(id).onsuccess = e => res(e.target.result); }); }
-    async deletePlaybook(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').delete(id).onsuccess = () => res(true); }); }
+    
+    async getAllPlaybooks(raw = false) { 
+        if (!this.db) await this.open(); 
+        return new Promise(res => { 
+            this.db.transaction(['playbooks'], 'readonly').objectStore('playbooks').getAll().onsuccess = e => {
+                let results = e.target.result || [];
+                if (!raw) {
+                    // 🟢 NOUVEAU : On clone l'objet pour ne pas casser la base locale
+                    results = results.map(pb => {
+                        let pbCopy = { ...pb };
+                        if (pbCopy.preview && typeof pbCopy.preview === 'string') {
+                            pbCopy.preview = this._base64ToBlob(pbCopy.preview);
+                        }
+                        return pbCopy;
+                    });
+                }
+                res(results);
+            }; 
+        }); 
+    }
+    
+    async getPlaybook(id, raw = false) { 
+        if (!this.db) await this.open(); 
+        return new Promise(res => { 
+            this.db.transaction(['playbooks'], 'readonly').objectStore('playbooks').get(id).onsuccess = e => {
+                let pb = e.target.result;
+                if (!pb) return res(null);
+                
+                // 🟢 NOUVEAU : On clone l'objet ici aussi
+                let pbCopy = { ...pb };
+                if (!raw && pbCopy.preview && typeof pbCopy.preview === 'string') {
+                    pbCopy.preview = this._base64ToBlob(pbCopy.preview);
+                }
+                res(pbCopy);
+            }; 
+        }); 
+    }
+    
+    async deletePlaybook(id) { 
+        if (!this.db) await this.open(); 
+        return new Promise(res => { 
+            this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').delete(id).onsuccess = () => { 
+                this._triggerSync(); 
+                res(true); 
+            }; 
+        }); 
+    }
     
     // --- SÉANCES (PLANNER) ---
     async savePlan(data, id = null) { 
@@ -61,18 +133,19 @@ class ORBDatabase {
             const dataToSave = { ...data };
             if (id) dataToSave.id = id; else delete dataToSave.id; 
             const req = id ? s.put(dataToSave) : s.add(dataToSave); 
-            req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e);
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
+            req.onerror = e => rej(e);
         }); 
     }
     async getAllPlans() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['trainingPlans'], 'readonly').objectStore('trainingPlans').getAll().onsuccess = e => res(e.target.result); }); }
     async getPlan(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['trainingPlans'], 'readonly').objectStore('trainingPlans').get(id).onsuccess = e => res(e.target.result); }); }
-    async deletePlan(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['trainingPlans'], 'readwrite').objectStore('trainingPlans').delete(id).onsuccess = () => res(true); }); }
+    async deletePlan(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['trainingPlans'], 'readwrite').objectStore('trainingPlans').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 
     // --- TAGS ---
     async getAllTags() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['tags'], 'readonly').objectStore('tags').getAll().onsuccess = e => res(e.target.result); }); }
-    async addTag(name) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['tags'], 'readwrite').objectStore('tags').add({name}); req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e);}); }
-    async deleteTag(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['tags'], 'readwrite').objectStore('tags').delete(id).onsuccess = () => res(true); }); }
-    async assignTagsToPlaybook(playbookId, tagIds) { if (!this.db) await this.open(); return new Promise(async (res, rej) => { const playbook = await this.getPlaybook(playbookId); if (!playbook) return rej("Introuvable"); playbook.tagIds = tagIds; this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').put(playbook).onsuccess = () => res(true); }); }
+    async addTag(name) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['tags'], 'readwrite').objectStore('tags').add({name}); req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; req.onerror = e => rej(e);}); }
+    async deleteTag(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['tags'], 'readwrite').objectStore('tags').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
+    async assignTagsToPlaybook(playbookId, tagIds) { if (!this.db) await this.open(); return new Promise(async (res, rej) => { const playbook = await this.getPlaybook(playbookId, true); if (!playbook) return rej("Introuvable"); playbook.tagIds = tagIds; this.db.transaction(['playbooks'], 'readwrite').objectStore('playbooks').put(playbook).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 
     // --- CALENDRIER ---
     async saveCalendarEvent(data) {
@@ -82,11 +155,12 @@ class ORBDatabase {
             const dataToSave = { ...data };
             if (!dataToSave.id) delete dataToSave.id; 
             const req = dataToSave.id ? s.put(dataToSave) : s.add(dataToSave);
-            req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e);
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
+            req.onerror = e => rej(e);
         });
     }
     async getAllCalendarEvents() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['calendarEvents'], 'readonly').objectStore('calendarEvents').getAll().onsuccess = e => res(e.target.result); }); }
-    async deleteCalendarEvent(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['calendarEvents'], 'readwrite').objectStore('calendarEvents').delete(id).onsuccess = () => res(true); }); }
+    async deleteCalendarEvent(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['calendarEvents'], 'readwrite').objectStore('calendarEvents').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 
     // --- EFFECTIFS - ÉQUIPES ---
     async saveTeam(data) {
@@ -96,12 +170,12 @@ class ORBDatabase {
             const dataToSave = { ...data };
             if (!dataToSave.id) delete dataToSave.id; 
             const req = dataToSave.id ? s.put(dataToSave) : s.add(dataToSave);
-            req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e);
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
+            req.onerror = e => rej(e);
         });
     }
     async getAllTeams() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['teams'], 'readonly').objectStore('teams').getAll().onsuccess = e => res(e.target.result); }); }
-    // NOUVEAU : SUPPRESSION D'ÉQUIPE
-    async deleteTeam(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['teams'], 'readwrite').objectStore('teams').delete(id).onsuccess = () => res(true); }); }
+    async deleteTeam(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['teams'], 'readwrite').objectStore('teams').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 
     // --- EFFECTIFS - JOUEURS ---
     async savePlayer(data) {
@@ -111,11 +185,13 @@ class ORBDatabase {
             const dataToSave = { ...data };
             if (!dataToSave.id) delete dataToSave.id; 
             const req = dataToSave.id ? s.put(dataToSave) : s.add(dataToSave);
-            req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e);
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
+            req.onerror = e => rej(e);
         });
     }
     async getAllPlayers() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['players'], 'readonly').objectStore('players').getAll().onsuccess = e => res(e.target.result); }); }
-    async deletePlayer(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['players'], 'readwrite').objectStore('players').delete(id).onsuccess = () => res(true); }); }
+    async deletePlayer(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['players'], 'readwrite').objectStore('players').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
+    
     // --- FICHES PDF (SHEETS) ---
     async saveSheet(data, id = null) {
         if (!this.db) await this.open();
@@ -124,7 +200,7 @@ class ORBDatabase {
             const dataToSave = { ...data };
             if (id) dataToSave.id = id; else delete dataToSave.id;
             const req = id ? s.put(dataToSave) : s.add(dataToSave);
-            req.onsuccess = e => res(e.target.result); 
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
             req.onerror = e => rej(e);
         });
     }
@@ -141,7 +217,7 @@ class ORBDatabase {
         if (!this.db) await this.open(); 
         return new Promise((res, rej) => { 
             const req = this.db.transaction(['sheetTags'], 'readwrite').objectStore('sheetTags').add({name}); 
-            req.onsuccess = e => res(e.target.result); 
+            req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
             req.onerror = e => rej(e);
         }); 
     }

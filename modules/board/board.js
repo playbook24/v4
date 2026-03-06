@@ -77,36 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    const saveToLibraryBtn = document.getElementById('save-to-library-btn');
-    if (saveToLibraryBtn) {
-        saveToLibraryBtn.addEventListener('click', async () => {
-            if (typeof html2canvas === 'undefined') return alert("Erreur: la librairie de capture d'écran n'est pas chargée.");
-
-            try {
-                const canvas = await html2canvas(document.getElementById('court-container'), { scale: 0.5 });
-                canvas.toBlob(async (blob) => {
-                    const dataToSave = JSON.parse(JSON.stringify(window.ORB.playbookState));
-                    if(!dataToSave.name) dataToSave.name = document.getElementById('play-name-input').value || "Nouveau Système";
-                    
-                    const currentId = window.ORB.appState.currentLoadedPlaybookId;
-                    
-                    try {
-                        const savedId = await orbDB.savePlaybook(dataToSave, blob, currentId);
-                        window.ORB.appState.currentLoadedPlaybookId = savedId;
-                        alert("Playbook sauvegardé dans la bibliothèque !");
-                        
-                        const playbookManagerContainer = document.getElementById('play-manager-container');
-                        if (playbookManagerContainer) playbookManagerContainer.classList.add('hidden');
-                    } catch (error) {
-                        alert("Erreur lors de la sauvegarde.");
-                    }
-                }, 'image/jpeg', 0.8);
-            } catch (err) {
-                 alert("Erreur lors de la création de l'aperçu.");
-            }
-        });
-    }
-
     // =========================================================
     // 5. GESTION DES FICHIERS LOCAUX (.JSON) ET EXPORTS
     // =========================================================

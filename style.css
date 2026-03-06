@@ -265,3 +265,46 @@ body.light-mode .app-header a {
         padding: 15px;
     }
 }
+/* --- BOUTONS GOOGLE DRIVE (THÈME NOIR & OR) --- */
+.drive-main-btn {
+    width: 100%;
+    background: #111111;
+    color: #BFA98D;
+    border: 1px solid #BFA98D;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.drive-main-btn:hover {
+    background: #BFA98D;
+    color: #111111;
+}
+
+.drive-action-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    background: #1a1a1a;
+    color: #aaaaaa;
+}
+.drive-action-btn:hover {
+    border-color: #BFA98D;
+    color: #BFA98D;
+}
+
+/* Bouton Envoyer & Charger au survol */
+.btn-push:hover, .btn-pull:hover {
+    background: #BFA98D;
+    color: #111111;
+}
