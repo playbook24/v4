@@ -21,6 +21,18 @@
         </header>
 
         <main style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+            <div class="planner-header" style="display: flex; justify-content: space-between; align-items: center; background: var(--color-container); padding: 20px; border-radius: 12px; box-shadow: var(--shadow-soft); border: 1px solid var(--color-border); margin-bottom: 20px;">
+                <h2 id="planner-view-title" style="margin: 0; font-family: var(--font-title); letter-spacing: 1px; display: flex; align-items: center; gap: 15px;">
+                    <button id="btn-back-plan-folders" style="background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; display: none; align-items: center; gap: 5px;">
+                        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+                        Retour
+                    </button>
+                    <span id="planner-title-text">Vos Dossiers de Séances</span>
+                </h2>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-create-plan-folder" class="btn-primary" style="padding: 10px 20px; font-size: 1em; background: #111; color: var(--color-primary); border: 1px solid var(--color-primary);">+ Nouveau Dossier</button>
+                </div>
+            </div>
             <div id="planner-grid"></div>
         </main>
     </div>
@@ -70,6 +82,24 @@
                 <div id="plan-selector-list" class="premium-mini-grid"></div>
             </div>
         </main>
+    </div>
+
+    <!-- Modale Assignation Dossier -->
+    <div id="assign-plan-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 3000; display: flex; justify-content: center; align-items: center;">
+        <div class="centered-panel" style="background: var(--color-container); border-radius: 12px; width: 450px; max-width: 90vw; box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 25px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--color-primary);">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; margin-bottom: 20px;">
+                <h3 id="assign-plan-title" style="margin: 0; font-size: 1.3em;">Classer la séance</h3>
+                <button id="assign-plan-close-btn" class="btn-icon" style="background: transparent; border: none; cursor: pointer; color: var(--color-text); padding: 5px; transition: color 0.2s;"><svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: currentColor;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
+            </div>
+            <div class="assignment-section" style="margin-bottom: 20px; background: var(--color-background); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border);">
+                <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--color-primary); border-bottom: 1px solid var(--color-border); padding-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor;"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                    Dossiers
+                </h4>
+                <div id="assign-plan-folders-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto;"></div>
+            </div>
+            <button id="btn-save-plan-assignment" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1.1em; margin-top: 10px;">Sauvegarder le classement</button>
+        </div>
     </div>
 
     <script src="../../core/db.js"></script>

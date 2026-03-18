@@ -217,6 +217,7 @@ const ORBSync = {
                 trainingPlans: await orbDB.getAllPlans(),
                 tags: await orbDB.getAllTags(),
                 folders: await orbDB.getAllFolders(), // <-- ICI
+                planFolders: await orbDB.getAllPlanFolders(),
                 calendarEvents: await orbDB.getAllCalendarEvents(),
                 players: await orbDB.getAllPlayers(),
                 teams: await orbDB.getAllTeams(),
@@ -276,7 +277,7 @@ const ORBSync = {
             
             if (data && typeof data === 'object') {
                 // 🟢 NOUVEAU : Ajout de "folders" dans la transaction de restauration
-                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
+                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'planFolders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
                 
                 const clearAndAdd = (storeName, items) => {
                     const store = tx.objectStore(storeName);
@@ -288,6 +289,7 @@ const ORBSync = {
                 clearAndAdd('trainingPlans', data.trainingPlans);
                 clearAndAdd('tags', data.tags);
                 clearAndAdd('folders', data.folders); // <-- ICI
+                clearAndAdd('planFolders', data.planFolders);
                 clearAndAdd('calendarEvents', data.calendarEvents);
                 clearAndAdd('players', data.players);
                 clearAndAdd('teams', data.teams);

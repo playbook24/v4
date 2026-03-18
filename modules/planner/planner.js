@@ -7,7 +7,13 @@ const PlannerModule = {
     allPlaybooks: [],
     allTags: [], 
     allFolders: [],
-    
+    allPlanFolders: [], // NOUVEAU: Dossiers pour les séances
+    allPlans: [],       // NOUVEAU: Stocker les séances chargées
+
+    plannerViewMode: 'FOLDERS', // 'FOLDERS' ou 'PLANS'
+    currentPlanFolderId: null,
+    currentPlanToAssign: null,
+
     libViewMode: 'FOLDERS', // 'FOLDERS' ou 'PLAYBOOKS'
     currentFolderId: null,
     currentTagId: null,
@@ -36,6 +42,12 @@ const PlannerModule = {
         this.btnLibBack = document.getElementById('btn-planner-lib-back');
         this.filterContainer = document.getElementById('plan-selector-filters');
         this.searchInput = document.getElementById('plan-selector-search');
+
+        // NOUVEAU: UI Planificateur principal
+        this.plannerTitleText = document.getElementById('planner-title-text');
+        this.btnBackPlanFolders = document.getElementById('btn-back-plan-folders');
+        this.btnCreatePlanFolder = document.getElementById('btn-create-plan-folder');
+        this.assignPlanModal = document.getElementById('assign-plan-modal');
     },
 
     bindEvents() {
@@ -51,21 +63,113 @@ const PlannerModule = {
         };
 
         this.searchInput.oninput = (e) => this.renderLibPlaybooks(e.target.value);
+
+        // NOUVELLES ACTIONS Planificateur
+        this.btnBackPlanFolders.onclick = () => {
+            this.plannerViewMode = 'FOLDERS';
+            this.currentPlanFolderId = null;
+            this.loadGrid();
+        };
+
+        this.btnCreatePlanFolder.onclick = async () => {
+            const name = prompt("Entrez le nom du nouveau dossier (ex: U13, Janvier...) :");
+            if (name && name.trim() !== '') {
+                await orbDB.addPlanFolder(name.trim());
+                this.loadGrid();
+            }
+        };
+
+        document.getElementById('assign-plan-close-btn').onclick = () => this.assignPlanModal.classList.add('hidden');
+        document.getElementById('btn-save-plan-assignment').onclick = () => this.savePlanAssignment();
     },
 
     async loadGrid() {
-        const plans = await orbDB.getAllPlans();
+        this.allPlans = await orbDB.getAllPlans();
+        this.allPlanFolders = await orbDB.getAllPlanFolders();
+
+        if (this.plannerViewMode === 'FOLDERS') {
+            this.renderPlanFolders();
+        } else {
+            this.renderPlansGrid();
+        }
+    },
+
+    renderPlanFolders() {
+        this.plannerTitleText.textContent = "Vos Dossiers de Séances";
+        this.btnBackPlanFolders.style.display = 'none';
+        this.btnCreatePlanFolder.style.display = 'inline-block';
+        this.grid.innerHTML = '';
+
+        // Dossier "TOUTES LES SÉANCES"
+        this.grid.appendChild(this.createPlanFolderCard('ALL', 'Toutes les séances', this.iconAll, this.allPlans.length));
+
+        // Dossiers créés
+        this.allPlanFolders.forEach(folder => {
+            const count = this.allPlans.filter(p => p.folderIds && p.folderIds.includes(folder.id)).length;
+            this.grid.appendChild(this.createPlanFolderCard(folder.id, folder.name, this.iconFolder, count, true));
+        });
+    },
+
+    createPlanFolderCard(id, name, icon, count, isDeletable = false) {
+        const card = document.createElement('div');
+        card.className = 'folder-card';
+        card.innerHTML = `
+            <div class="folder-icon" style="transform: scale(1.5); margin: 0 15px;">${icon}</div>
+            <div class="folder-info">
+                <h3 style="font-size: 1.4em;">${name}</h3>
+                <p style="font-size: 1.1em;">${count} séance${count > 1 ? 's' : ''}</p>
+            </div>
+            ${isDeletable ? `<button class="folder-btn-delete" title="Supprimer ce dossier"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>` : ''}
+        `;
+        card.onclick = async (e) => {
+            if (e.target.closest('.folder-btn-delete')) {
+                e.stopPropagation();
+                if(confirm(`Voulez-vous vraiment supprimer le dossier "${name}" ?\n(Les séances ne seront pas supprimées)`)) {
+                    await orbDB.deletePlanFolder(id);
+                    // Retirer le dossier de toutes les séances
+                    this.allPlans.forEach(p => {
+                        if (p.folderIds && p.folderIds.includes(id)) {
+                            p.folderIds = p.folderIds.filter(fid => fid !== id);
+                            orbDB.assignFoldersToPlan(p.id, p.folderIds); 
+                        }
+                    });
+                    this.loadGrid();
+                }
+                return;
+            }
+            this.plannerViewMode = 'PLANS';
+            this.currentPlanFolderId = id;
+            this.plannerTitleText.textContent = name;
+            this.loadGrid();
+        };
+        return card;
+    },
+
+    renderPlansGrid() {
+        this.btnBackPlanFolders.style.display = 'inline-flex';
+        this.btnCreatePlanFolder.style.display = 'none';
+
+        let filteredPlans = this.allPlans;
+        if (this.currentPlanFolderId !== 'ALL') {
+            filteredPlans = filteredPlans.filter(p => p.folderIds && p.folderIds.includes(this.currentPlanFolderId));
+        }
+
         this.grid.innerHTML = `
             <div class="card-new-plan" id="btn-new-plan">
                 <svg viewBox="0 0 24 24"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
                 Créer une Séance
             </div>`;
         
-        plans.reverse().forEach(plan => {
+        filteredPlans.reverse().forEach(plan => {
             const card = document.createElement('div');
             card.className = 'plan-card';
             card.innerHTML = `
-                <h3 style="margin-top:0; color:var(--color-primary); font-size:1.4em; border-bottom:1px solid var(--color-border); padding-bottom:10px;">${plan.name || 'Séance sans nom'}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h3 style="margin-top:0; color:var(--color-primary); font-size:1.4em; border-bottom:1px solid var(--color-border); padding-bottom:10px; flex-grow:1;">${plan.name || 'Séance sans nom'}</h3>
+                    <button class="btn-icon" title="Classer la séance" onclick="PlannerModule.openAssignPlanModal(${plan.id})" style="color:var(--color-primary); margin-left:10px;">
+                        <svg viewBox="0 0 24 24" style="width:24px;"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg>
+                    </button>
+                </div>
                 <p style="opacity:0.8; font-size:1em; margin: 15px 0;"><strong style="color:var(--color-text)">${plan.playbookIds.length}</strong> exercices inclus</p>
                 <div style="margin-top:20px; display:flex; gap:10px;">
                     <button class="btn-primary" style="flex:2; padding:10px;" onclick="PlannerModule.editPlan(${plan.id})">Modifier</button>
@@ -79,6 +183,42 @@ const PlannerModule = {
         });
 
         document.getElementById('btn-new-plan').onclick = () => this.openEditor();
+    },
+
+    openAssignPlanModal(planId) {
+        const plan = this.allPlans.find(p => p.id === planId);
+        if (!plan) return;
+        this.currentPlanToAssign = plan;
+        document.getElementById('assign-plan-title').textContent = `Classer : ${plan.name}`;
+        
+        const planFolderIds = new Set(plan.folderIds || []);
+        const list = document.getElementById('assign-plan-folders-list');
+        list.innerHTML = '';
+
+        if (this.allPlanFolders.length === 0) {
+            list.innerHTML = '<p style="font-size:0.9em; opacity:0.7;">Aucun dossier créé.</p>';
+        } else {
+            this.allPlanFolders.forEach(folder => {
+                const isChecked = planFolderIds.has(folder.id);
+                const label = document.createElement('label');
+                label.className = 'checkbox-label';
+                label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.gap = '10px'; label.style.cursor = 'pointer'; label.style.fontSize = '1.1em';
+                label.innerHTML = `<input type="checkbox" class="plan-folder-checkbox" value="${folder.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary);"><span>${folder.name}</span>`;
+                list.appendChild(label);
+            });
+        }
+        
+        this.assignPlanModal.classList.remove('hidden');
+    },
+
+    async savePlanAssignment() {
+        if (!this.currentPlanToAssign) return;
+        const selectedIds = Array.from(document.querySelectorAll('.plan-folder-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+        try {
+            await orbDB.assignFoldersToPlan(this.currentPlanToAssign.id, selectedIds);
+            this.assignPlanModal.classList.add('hidden');
+            this.loadGrid();
+        } catch(e) { console.error(e); }
     },
 
     closeEditor() {
@@ -293,7 +433,8 @@ const PlannerModule = {
             const planToSave = {
                 name: document.getElementById('plan-editor-name').value || "Séance du " + new Date().toLocaleDateString(),
                 notes: document.getElementById('plan-editor-notes').value,
-                playbookIds: this.currentPlan.playbookIds
+                playbookIds: this.currentPlan.playbookIds,
+                folderIds: this.currentPlan.folderIds || (this.currentPlanFolderId !== 'ALL' && this.currentPlanFolderId ? [this.currentPlanFolderId] : [])
             };
             
             if (this.currentPlan.id !== null && this.currentPlan.id !== undefined) {

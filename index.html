@@ -133,6 +133,7 @@
                             trainingPlans: await orbDB.getAllPlans(),
                             tags: await orbDB.getAllTags(),
                             folders: await orbDB.getAllFolders(),
+                            planFolders: await orbDB.getAllPlanFolders(),
                             calendarEvents: await orbDB.getAllCalendarEvents(),
                             players: await orbDB.getAllPlayers(),
                             teams: await orbDB.getAllTeams(),
@@ -189,6 +190,7 @@
                             dataToImport.trainingPlans = parsedData.trainingPlans || (parsedData.data && parsedData.data.trainingPlans) || [];
                             dataToImport.tags = parsedData.tags || (parsedData.data && parsedData.data.tags) || [];
                             dataToImport.folders = parsedData.folders || (parsedData.data && parsedData.data.folders) || [];
+                            dataToImport.planFolders = parsedData.planFolders || (parsedData.data && parsedData.data.planFolders) || [];
                             dataToImport.calendarEvents = parsedData.calendarEvents || (parsedData.data && parsedData.data.calendarEvents) || [];
                             dataToImport.players = parsedData.players || (parsedData.data && parsedData.data.players) || [];
                             dataToImport.teams = parsedData.teams || (parsedData.data && parsedData.data.teams) || [];
@@ -224,7 +226,7 @@
                         // NOUVEAU : On s'assure que la connexion à la base de données est bien active
                         if (!orbDB.db) await orbDB.open();
 
-                        const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
+                        const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'planFolders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
                         
                         const clearAndAdd = (storeName, items) => {
                             const store = tx.objectStore(storeName);
@@ -236,6 +238,7 @@
                         clearAndAdd('trainingPlans', dataToImport.trainingPlans);
                         clearAndAdd('tags', dataToImport.tags);
                         clearAndAdd('folders', dataToImport.folders);
+                        clearAndAdd('planFolders', dataToImport.planFolders);
                         clearAndAdd('calendarEvents', dataToImport.calendarEvents);
                         clearAndAdd('players', dataToImport.players);
                         clearAndAdd('teams', dataToImport.teams);
@@ -273,7 +276,6 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="core/sync.js"></script>
-    <script src="../../core/sync.js"></script>
 </body>
 </html>
 
