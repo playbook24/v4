@@ -133,16 +133,16 @@ const CalendarModule = {
                     <div style="flex: 0 0 auto; display:flex; align-items:center; gap:5px; margin-left: 5px;">${iconsHtml}</div>
                 `;
                 
-                chip.onclick = (event) => { event.stopPropagation(); this.openEditor(dateStr); };
+                chip.onclick = (event) => { event.stopPropagation(); this.openEditor(dateStr, e.id); };
                 dayCell.appendChild(chip);
             });
 
-            dayCell.onclick = () => this.openEditor(dateStr);
+            dayCell.onclick = () => this.openEditor(dateStr, null);
             this.grid.appendChild(dayCell);
         }
     },
 
-    async openEditor(dateStr) {
+    async openEditor(dateStr, eventId = null) {
         this.selectedDateStr = dateStr;
         const formattedDate = new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         document.getElementById('event-date-display').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
@@ -155,7 +155,11 @@ const CalendarModule = {
         this.teamSelect.innerHTML = selectHtml;
         
         const events = await orbDB.getAllCalendarEvents();
-        const existingEvent = events.find(e => e.date === dateStr);
+        
+        let existingEvent = null;
+        if (eventId) {
+            existingEvent = events.find(e => e.id === eventId);
+        }
 
         const repeatContainer = document.getElementById('event-repeat-container');
         const repeatCheckbox = document.getElementById('event-repeat-checkbox');
