@@ -4,13 +4,16 @@
  */
 
 const SheetStudio = {
-    allPlaybooks: [], allPlans: [], allSheets: [], allTags: [], allSheetTags: [], allFolders: [], allPlanFolders: [],
+    allPlaybooks: [], allPlans: [], allSheets: [], allTags: [], allSheetTags: [], allFolders: [], allPlanFolders: [], allSheetFolders: [],
     currentMode: null, currentPlanId: null, currentSheetId: null,
     
     exoViewMode: 'FOLDERS', 
     currentExoFolderId: null,
     planViewMode: 'FOLDERS',
     currentPlanFolderId: null,
+    sheetViewMode: 'FOLDERS',
+    currentSheetFolderId: null,
+    currentSheetToAssign: null,
     activeTagExo: null, 
     activeTagStorage: null,
     
@@ -43,7 +46,6 @@ const SheetStudio = {
 
     cacheDOM() {
         this.views = {
-            hub: document.getElementById('view-hub'),
             selectExo: document.getElementById('view-select-exo'),
             selectPlan: document.getElementById('view-select-plan'),
             storage: document.getElementById('view-storage'),
@@ -64,7 +66,7 @@ const SheetStudio = {
     },
 
     bindEvents() {
-        document.getElementById('nav-new-exo').onclick = () => { 
+        document.getElementById('btn-new-exo-pdf').onclick = () => { 
             this.currentSheetId = null; 
             this.exoViewMode = 'FOLDERS'; 
             this.currentExoFolderId = null;
@@ -74,12 +76,33 @@ const SheetStudio = {
             this.renderSelectExoView();
         };
 
-        document.getElementById('nav-new-plan').onclick = () => { 
+        document.getElementById('btn-new-plan-pdf').onclick = () => { 
             this.currentSheetId = null; 
             this.planViewMode = 'FOLDERS';
             this.currentPlanFolderId = null;
             this.switchView('selectPlan'); 
             this.renderSelectPlanList();
+        };
+
+        document.getElementById('btn-new-pdf').onclick = () => {
+            this.currentSheetId = null;
+            this.startEditor('blank', null);
+        };
+        
+        document.getElementById('btn-create-sheet-folder').onclick = async () => {
+            const name = prompt("Entrez le nom du nouveau dossier (ex: Fiches Physiques, Notes) :");
+            if (name && name.trim() !== '') {
+                await orbDB.addSheetFolder(name.trim());
+                await this.loadData();
+                this.renderStorageList();
+            }
+        };
+
+        document.getElementById('btn-back-sheet-folders').onclick = () => {
+            this.sheetViewMode = 'FOLDERS';
+            this.currentSheetFolderId = null;
+            this.activeTagStorage = null;
+            this.renderStorageList();
         };
 
         this.btnPlanBack.onclick = () => {
@@ -88,11 +111,10 @@ const SheetStudio = {
                 this.currentPlanFolderId = null;
                 this.renderSelectPlanList();
             } else {
-                this.switchView('hub');
+                this.switchView('storage');
+                this.renderStorageList();
             }
         };
-
-        document.getElementById('nav-storage').onclick = () => { this.switchView('storage'); };
         
         this.searchExo.oninput = (e) => this.renderExoPlaybooks(e.target.value);
 
@@ -104,15 +126,26 @@ const SheetStudio = {
                 this.searchExo.value = '';
                 this.renderSelectExoView();
             } else {
-                this.switchView('hub');
+                this.switchView('storage');
+                this.renderStorageList();
             }
         };
 
         document.getElementById('btn-back-menu').onclick = () => {
             if(confirm("Avez-vous bien sauvegardé vos modifications ? Les éléments non enregistrés seront perdus.")) {
-                this.switchView('hub');
+                this.switchView('storage');
+                this.renderStorageList();
             }
         };
+
+        const blankSearchPb = document.getElementById('blank-search-pb');
+        if (blankSearchPb) {
+            blankSearchPb.addEventListener('input', () => {
+                if (this.blankPlaybookViewMode === 'PLAYBOOKS') {
+                    this.loadBlankPlaybooksSidebar(blankSearchPb.value);
+                }
+            });
+        }
 
         document.getElementById('btn-add-page').onclick = () => this.addPage();
         document.getElementById('btn-export-pdf').onclick = () => this.exportToPDF();
@@ -142,6 +175,11 @@ const SheetStudio = {
         document.getElementById('btn-undo').onclick = () => this.undo();
         document.getElementById('btn-redo').onclick = () => this.redo();
 
+        const btnUpdate = document.getElementById('btn-update-sheet');
+        if (btnUpdate) {
+            btnUpdate.onclick = () => this.updateSheet();
+        }
+
         document.getElementById('btn-save-sheet').onclick = () => this.openSaveModal();
         document.getElementById('cancel-save-sheet').onclick = () => document.getElementById('save-sheet-modal').classList.add('hidden');
         document.getElementById('confirm-save-sheet').onclick = () => this.saveSheet();
@@ -153,28 +191,40 @@ const SheetStudio = {
                 this.allSheetTags = await orbDB.getAllSheetTags();
                 document.getElementById('new-sheet-tag-input').value = '';
                 this.renderSaveModalTags();
-                const lastCb = document.querySelector('#sheet-tags-checkboxes label:last-child input');
-                if(lastCb) lastCb.checked = true;
-                this.renderStorageTagsManager();
             }
         };
 
-        document.getElementById('btn-storage-add-tag').onclick = async () => {
-            const val = document.getElementById('storage-new-tag-input').value.trim();
+        document.getElementById('assign-sheet-close-btn').onclick = () => document.getElementById('assign-sheet-modal').classList.add('hidden');
+        
+        document.getElementById('btn-add-assign-sheet-tag').onclick = async () => {
+            const val = document.getElementById('new-assign-sheet-tag-input').value.trim();
             if(val) {
                 await orbDB.addSheetTag(val);
                 this.allSheetTags = await orbDB.getAllSheetTags();
-                document.getElementById('storage-new-tag-input').value = '';
-                this.renderStorageTagsManager();
-                this.renderTagsFilterStorage();
+                document.getElementById('new-assign-sheet-tag-input').value = '';
+                this.renderAssignModal(this.currentSheetToAssign);
             }
+        };
+        
+        document.getElementById('btn-save-sheet-assignment').onclick = async () => {
+            if (!this.currentSheetToAssign) return;
+            const selectedFolderIds = Array.from(document.querySelectorAll('#assign-sheet-folders-list input:checked')).map(cb => parseInt(cb.value, 10));
+            const selectedTagIds = Array.from(document.querySelectorAll('#assign-sheet-tags-list input:checked')).map(cb => parseInt(cb.value, 10));
+            
+            const sheet = this.currentSheetToAssign;
+            sheet.folderIds = selectedFolderIds;
+            sheet.tagIds = selectedTagIds;
+            await orbDB.saveSheet(sheet, sheet.id);
+            document.getElementById('assign-sheet-modal').classList.add('hidden');
+            await this.loadData();
+            this.renderStorageList();
         };
 
         this.workspace.addEventListener('mousedown', (e) => {
             if (e.target === this.workspace || e.target.classList.contains('a4-page') || e.target.id === 'pages-container') this.deselectAll();
         });
         document.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        document.addEventListener('mouseup', () => this.onMouseUp());
+        document.addEventListener('mouseup', (e) => this.onMouseUp(e));
     },
 
     commitState() {
@@ -196,20 +246,25 @@ const SheetStudio = {
         this.views[viewName].classList.remove('hidden');
         this.views[viewName].classList.add('active');
         document.getElementById('editor-top-actions').classList.toggle('hidden', viewName !== 'editor');
+        if (viewName === 'editor') {
+            const btnUpdate = document.getElementById('btn-update-sheet');
+            if (btnUpdate) btnUpdate.style.display = this.currentSheetId ? 'inline-block' : 'none';
+        }
         if (viewName !== 'editor') { this.pagesContainer.innerHTML = ''; }
-        if (viewName === 'storage') { this.renderStorageTagsManager(); }
+        if (viewName === 'storage') { this.renderStorageList(); }
     },
 
     async loadData() {
         try {
-            [this.allPlaybooks, this.allPlans, this.allSheets, this.allTags, this.allSheetTags, this.allFolders, this.allPlanFolders] = await Promise.all([
-                orbDB.getAllPlaybooks(), orbDB.getAllPlans(), orbDB.getAllSheets(), orbDB.getAllTags(), orbDB.getAllSheetTags(), orbDB.getAllFolders(), orbDB.getAllPlanFolders()
+            [this.allPlaybooks, this.allPlans, this.allSheets, this.allTags, this.allSheetTags, this.allFolders, this.allPlanFolders, this.allSheetFolders] = await Promise.all([
+                orbDB.getAllPlaybooks(), orbDB.getAllPlans(), orbDB.getAllSheets(), orbDB.getAllTags(), orbDB.getAllSheetTags(), orbDB.getAllFolders(), orbDB.getAllPlanFolders(), orbDB.getAllSheetFolders()
             ]);
         } catch(e) {
             console.warn("Base de données en cours de mise à jour, fallback activé.");
             this.allSheetTags = [];
             this.allFolders = [];
             this.allPlanFolders = [];
+            this.allSheetFolders = [];
         }
         this.renderTagsFilterStorage();
         this.renderSelectPlanList();
@@ -362,57 +417,123 @@ const SheetStudio = {
 
     renderStorageList() {
         this.listStorage.innerHTML = '';
-        let filtered = this.allSheets;
-        if(this.activeTagStorage) filtered = filtered.filter(s => s.tagIds && s.tagIds.includes(this.activeTagStorage));
-
-        if(filtered.length === 0) return this.listStorage.innerHTML = '<p style="opacity:0.6;">Aucune fiche trouvée.</p>';
-        filtered.forEach(sheet => {
-            const div = document.createElement('div'); div.className = 'storage-item';
-            const tagsHtml = (sheet.tagIds || []).map(id => {
-                const t = this.allSheetTags.find(tag => tag.id === id);
-                return t ? `<span style="font-size:0.75em; background:var(--color-primary); color:#000; padding:2px 6px; border-radius:4px; margin-right:5px; font-weight:bold;">${t.name}</span>` : '';
-            }).join('');
-
-            div.innerHTML = `<div><strong>${sheet.name}</strong><div style="margin-top:6px;">${tagsHtml}</div></div> <button class="btn-icon danger" style="padding:0; width:30px; height:30px;"><svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2 2 0 0,0 8,21H16A2 2 0 0,0 18,19V7H6V19Z"/></svg></button>`;
+        const titleText = document.getElementById('storage-title-text');
+        const btnBack = document.getElementById('btn-back-sheet-folders');
+        const btnCreateFolder = document.getElementById('btn-create-sheet-folder');
+        const filters = document.getElementById('filter-tags-storage');
+        
+        if (this.sheetViewMode === 'FOLDERS') {
+            titleText.textContent = "Vos Dossiers PDF";
+            btnBack.style.display = 'none';
+            btnCreateFolder.style.display = 'inline-block';
+            filters.classList.add('hidden');
             
-            div.querySelector('button').onclick = async (e) => {
-                e.stopPropagation();
-                if(confirm("Supprimer cette fiche ?")) {
-                    await orbDB.db.transaction(['sheets'], 'readwrite').objectStore('sheets').delete(sheet.id);
-                    await this.loadData();
-                }
-            };
-            div.onclick = () => {
-                this.currentSheetId = sheet.id;
-                this.switchView('editor');
-                this.loadPagesFromData(sheet.pages, true);
-                this.history = []; this.historyIndex = -1;
-                this.commitState(); 
-            };
-            this.listStorage.appendChild(div);
-        });
-    },
+            const divAll = document.createElement('div');
+            divAll.className = 'folder-card';
+            divAll.style.cssText = 'background: var(--color-container); border: 1px solid var(--color-border); border-radius: 10px; padding: 20px; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-soft); margin-bottom: 20px;';
+            divAll.innerHTML = `<div class="folder-icon">${this.iconAll}</div><div class="folder-info"><h3 style="margin:0 0 5px 0; color:var(--color-text);">Toutes les fiches</h3><p style="margin:0; opacity:0.7;">${this.allSheets.length} fiches</p></div>`;
+            divAll.onclick = () => { this.sheetViewMode = 'SHEETS'; this.currentSheetFolderId = 'ALL'; this.renderStorageList(); };
+            this.listStorage.appendChild(divAll);
+            
+            this.allSheetFolders.forEach(folder => {
+                const count = this.allSheets.filter(s => s.folderIds && s.folderIds.includes(folder.id)).length;
+                const div = document.createElement('div');
+                div.className = 'folder-card';
+                div.style.cssText = 'background: var(--color-container); border: 1px solid var(--color-border); border-radius: 10px; padding: 20px; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-soft); position: relative; margin-bottom: 20px;';
+                div.innerHTML = `<div class="folder-icon">${this.iconFolder}</div><div class="folder-info"><h3 style="margin:0 0 5px 0; color:var(--color-text);">${folder.name}</h3><p style="margin:0; opacity:0.7;">${count} fiches</p></div><button class="folder-btn-delete" title="Supprimer ce dossier" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--color-primary); cursor: pointer; opacity: 1;"><svg viewBox="0 0 24 24" style="width:24px; height:24px; fill:currentColor;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>`;
+                div.querySelector('.folder-btn-delete').onclick = async (e) => {
+                    e.stopPropagation();
+                    if(confirm(`Voulez-vous vraiment supprimer le dossier "${folder.name}" ?\n(Les fiches ne seront pas supprimées)`)) {
+                        await orbDB.deleteSheetFolder(folder.id);
+                        for(let s of this.allSheets) {
+                            if (s.folderIds && s.folderIds.includes(folder.id)) {
+                                s.folderIds = s.folderIds.filter(fid => fid !== folder.id);
+                                await orbDB.saveSheet(s, s.id);
+                            }
+                        }
+                        await this.loadData();
+                        this.renderStorageList();
+                    }
+                };
+                div.onclick = () => { this.sheetViewMode = 'SHEETS'; this.currentSheetFolderId = folder.id; this.renderStorageList(); };
+                this.listStorage.appendChild(div);
+            });
+        } else {
+            let folderName = "Toutes les fiches";
+            if (this.currentSheetFolderId !== 'ALL') {
+                const f = this.allSheetFolders.find(x => x.id === this.currentSheetFolderId);
+                if (f) folderName = f.name;
+            }
+            titleText.textContent = folderName;
+            btnBack.style.display = 'inline-flex';
+            btnCreateFolder.style.display = 'none';
+            filters.classList.remove('hidden');
+            
+            this.renderTagsFilterStorage();
+            
+            let filtered = this.allSheets;
+            if (this.currentSheetFolderId !== 'ALL') {
+                filtered = filtered.filter(s => s.folderIds && s.folderIds.includes(this.currentSheetFolderId));
+            }
+            if(this.activeTagStorage !== null) {
+                filtered = filtered.filter(s => s.tagIds && s.tagIds.includes(this.activeTagStorage));
+            }
 
-    renderStorageTagsManager() {
-        const container = document.getElementById('storage-tags-manager-list');
-        container.innerHTML = '';
-        this.allSheetTags.forEach(t => {
-            const row = document.createElement('div');
-            row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px;";
-            row.innerHTML = `
-                <span style="color:var(--color-primary); font-weight:bold;">${t.name}</span>
-                <button class="btn-icon danger" style="padding:2px; width:22px; height:22px;" title="Supprimer définitivement"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
-            `;
-            row.querySelector('button').onclick = async () => {
-                if(confirm(`Supprimer le tag "${t.name}" de la base de données ?`)) {
-                    await orbDB.db.transaction(['sheetTags'], 'readwrite').objectStore('sheetTags').delete(t.id);
-                    this.allSheetTags = await orbDB.getAllSheetTags();
-                    this.renderStorageTagsManager();
-                    this.renderTagsFilterStorage();
-                }
-            };
-            container.appendChild(row);
-        });
+            if(filtered.length === 0) {
+                this.listStorage.innerHTML = '<p style="grid-column: 1/-1; text-align:center; opacity:0.6; padding: 20px;">Aucune fiche trouvée.</p>';
+                return;
+            }
+            
+            filtered.reverse().forEach(sheet => {
+                const div = document.createElement('div');
+                div.className = 'playbook-card';
+                div.style.cssText = 'background: var(--color-container); border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-soft); cursor: pointer;';
+                
+                const tagsHtml = (sheet.tagIds || []).map(id => {
+                    const t = this.allSheetTags.find(tag => tag.id === id);
+                    return t ? `<span style="background: var(--color-background); padding: 4px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid var(--color-border); margin-right: 5px; display: inline-block;">${t.name}</span>` : '';
+                }).join('');
+
+                div.innerHTML = `
+                    <div style="padding: 15px; flex-grow: 1;">
+                        <h3 style="margin: 0 0 5px 0; font-size: 1.2em; color:var(--color-text);">${sheet.name}</h3>
+                        <p style="margin: 0; font-size: 0.85em; opacity: 0.7; margin-bottom:10px;">${sheet.pages ? sheet.pages.length : 0} page(s)</p>
+                        ${tagsHtml ? `<div>${tagsHtml}</div>` : ''}
+                    </div>
+                    <div style="display: flex; border-top: 1px solid var(--color-border); background: var(--color-container);">
+                        <button class="card-btn-assign" title="Classer la fiche" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); color: var(--color-text); transition: background 0.2s;"><svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg></button>
+                        <button class="card-btn-delete" title="Supprimer" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); color: var(--color-primary); transition: background 0.2s;"><svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19A2 2 0 0 0 8 21H16A2 2 0 0 0 18 19V7H6V19Z"/></svg></button>
+                        <button class="card-btn-open" title="Ouvrir dans l'éditeur" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; color: var(--color-primary); font-weight:bold; display:flex; justify-content:center; align-items:center; gap:5px; transition: background 0.2s;">Ouvrir <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" /></svg></button>
+                    </div>
+                `;
+
+
+                div.querySelector('.card-btn-delete').onclick = async (e) => {
+                    e.stopPropagation();
+                    if(confirm("Supprimer cette fiche ?")) {
+                        await orbDB.db.transaction(['sheets'], 'readwrite').objectStore('sheets').delete(sheet.id);
+                        await this.loadData();
+                        this.renderStorageList();
+                    }
+                };
+                div.querySelector('.card-btn-assign').onclick = (e) => {
+                    e.stopPropagation();
+                    this.currentSheetToAssign = sheet;
+                    this.renderAssignModal(sheet);
+                    document.getElementById('assign-sheet-modal').classList.remove('hidden');
+                };
+                div.querySelector('.card-btn-open').onclick = (e) => {
+                    e.stopPropagation();
+                    this.currentSheetId = sheet.id;
+                    this.switchView('editor');
+                    this.loadPagesFromData(sheet.pages, true);
+                    this.history = []; this.historyIndex = -1;
+                    this.commitState(); 
+                };
+                div.onclick = div.querySelector('.card-btn-open').onclick;
+                this.listStorage.appendChild(div);
+            });
+        }
     },
 
     startEditor(mode, id) {
@@ -440,6 +561,16 @@ const SheetStudio = {
             document.getElementById('sidebar-plan-list').classList.remove('hidden');
             document.getElementById('sidebar-exo-detail').classList.add('hidden');
             this.loadPlanSidebar(id);
+        } else if (mode === 'blank') {
+            document.getElementById('sidebar-plan-list').classList.add('hidden');
+            document.getElementById('sidebar-exo-detail').classList.add('hidden');
+            document.getElementById('btn-back-to-plan').classList.add('hidden');
+            document.getElementById('sidebar-blank-playbooks').classList.remove('hidden');
+            this.blankPlaybookViewMode = 'FOLDERS';
+            this.blankPlaybookFolderId = 'ALL';
+            this.activeTagBlankPb = null;
+            if(document.getElementById('blank-search-pb')) document.getElementById('blank-search-pb').value = '';
+            this.loadBlankPlaybooksSidebar();
         }
 
         this.addTextElement(`<div style="text-align:center;"><strong>${titleName.toUpperCase()}</strong></div>`, '50px', '40px', '694px', 'auto', '24px', 'bold', firstPage, true, true);
@@ -469,6 +600,96 @@ const SheetStudio = {
             };
             container.appendChild(btn);
         });
+    },
+
+    loadBlankPlaybooksSidebar(searchText = '') {
+        const container = document.getElementById('blank-playbooks-list');
+        const headerActions = document.getElementById('blank-playbooks-header');
+        const searchInput = document.getElementById('blank-search-pb');
+        const filterTags = document.getElementById('filter-tags-blank-pb');
+        
+        container.innerHTML = '';
+        headerActions.innerHTML = '';
+
+        if (this.blankPlaybookViewMode === 'FOLDERS') {
+            searchInput.classList.add('hidden');
+            filterTags.classList.add('hidden');
+            
+            const btnAll = document.createElement('button');
+            btnAll.className = 'studio-tool-btn exo-btn-list';
+            btnAll.innerHTML = `<strong>${this.iconAll} Tous les schémas</strong>`;
+            btnAll.onclick = () => { this.blankPlaybookViewMode = 'PLAYBOOKS'; this.blankPlaybookFolderId = 'ALL'; this.loadBlankPlaybooksSidebar(); };
+            container.appendChild(btnAll);
+            
+            this.allFolders.forEach(f => {
+                const count = this.allPlaybooks.filter(pb => pb.folderIds && pb.folderIds.includes(f.id)).length;
+                const btn = document.createElement('button');
+                btn.className = 'studio-tool-btn exo-btn-list';
+                btn.innerHTML = `<span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; margin-right:8px;">${this.iconFolder}</span> <div style="display:flex; flex-direction:column; text-align:left;"><strong>${f.name}</strong><span style="font-size:0.85em; opacity:0.6;">${count} schémas</span></div>`;
+                btn.onclick = () => { this.blankPlaybookViewMode = 'PLAYBOOKS'; this.blankPlaybookFolderId = f.id; this.loadBlankPlaybooksSidebar(); };
+                container.appendChild(btn);
+            });
+        } else {
+            searchInput.classList.remove('hidden');
+            filterTags.classList.remove('hidden');
+
+            const btnBack = document.createElement('button');
+            btnBack.className = 'studio-tool-btn';
+            btnBack.style.padding = '6px';
+            btnBack.innerHTML = '&larr; Dossiers';
+            btnBack.onclick = () => { this.blankPlaybookViewMode = 'FOLDERS'; this.loadBlankPlaybooksSidebar(); };
+            headerActions.appendChild(btnBack);
+
+            filterTags.innerHTML = '';
+            const allTagBtn = document.createElement('div');
+            allTagBtn.className = `tag-chip ${this.activeTagBlankPb === null ? 'active' : ''}`;
+            allTagBtn.textContent = "Tous";
+            allTagBtn.onclick = () => { this.activeTagBlankPb = null; this.loadBlankPlaybooksSidebar(searchInput.value); };
+            filterTags.appendChild(allTagBtn);
+
+            let fId = (typeof this.blankPlaybookFolderId === 'number') ? this.blankPlaybookFolderId : null;
+            const currentTags = this.allTags.filter(t => t.folderId == fId);
+            
+            currentTags.forEach(t => {
+                const btn = document.createElement('div');
+                btn.className = `tag-chip ${this.activeTagBlankPb === t.id ? 'active' : ''}`;
+                btn.textContent = t.name;
+                btn.onclick = () => { this.activeTagBlankPb = this.activeTagBlankPb === t.id ? null : t.id; this.loadBlankPlaybooksSidebar(searchInput.value); };
+                filterTags.appendChild(btn);
+            });
+
+            let filtered = this.allPlaybooks;
+            if (this.blankPlaybookFolderId !== 'ALL') {
+                filtered = filtered.filter(pb => pb.folderIds && pb.folderIds.includes(this.blankPlaybookFolderId));
+            }
+            if (this.activeTagBlankPb !== null) {
+                filtered = filtered.filter(pb => pb.tagIds && pb.tagIds.includes(this.activeTagBlankPb));
+            }
+            
+            const searchLower = searchText.toLowerCase();
+            filtered = filtered.filter(pb => (pb.name || '').toLowerCase().includes(searchLower));
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align:center; opacity:0.6;">Aucun playbook.</p>';
+            }
+
+            filtered.forEach(pb => {
+                const btn = document.createElement('button');
+                btn.className = 'studio-tool-btn exo-btn-list';
+                btn.textContent = pb.name || 'Sans nom';
+                btn.onclick = () => {
+                    document.getElementById('sidebar-blank-playbooks').classList.add('hidden');
+                    document.getElementById('sidebar-exo-detail').classList.remove('hidden');
+                    document.getElementById('btn-back-to-plan').classList.remove('hidden');
+                    document.getElementById('btn-back-to-plan').onclick = () => {
+                        document.getElementById('sidebar-exo-detail').classList.add('hidden');
+                        document.getElementById('sidebar-blank-playbooks').classList.remove('hidden');
+                    };
+                    this.loadExoDetail(pb.id);
+                };
+                container.appendChild(btn);
+            });
+        }
     },
 
    async generateSceneImage(playbookData, sceneIndex) {
@@ -880,8 +1101,36 @@ const SheetStudio = {
         }
     },
     
-    onMouseUp() { 
-        if(this.isDragging || this.isResizing) this.commitState(); 
+    onMouseUp(e) { 
+        if (this.isDragging && this.selectedElement) {
+            const rect = this.selectedElement.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const pages = Array.from(document.querySelectorAll('.a4-page'));
+            let targetPage = pages.find(p => {
+                const pr = p.getBoundingClientRect();
+                return centerX >= pr.left && centerX <= pr.right && centerY >= pr.top && centerY <= pr.bottom;
+            });
+            
+            if (targetPage && targetPage !== this.selectedElement.parentElement) {
+                const oldPr = this.selectedElement.parentElement.getBoundingClientRect();
+                const newPr = targetPage.getBoundingClientRect();
+                const currentLeft = parseFloat(this.selectedElement.style.left) || 0;
+                const currentTop = parseFloat(this.selectedElement.style.top) || 0;
+                
+                const absLeft = oldPr.left + currentLeft;
+                const absTop = oldPr.top + currentTop;
+                
+                this.selectedElement.style.left = `${absLeft - newPr.left}px`;
+                this.selectedElement.style.top = `${absTop - newPr.top}px`;
+                
+                targetPage.appendChild(this.selectedElement);
+            }
+            this.commitState();
+        } else if (this.isResizing) {
+            this.commitState(); 
+        }
         this.isDragging = false; this.isResizing = false; 
         this.clearGuides();
     },
@@ -944,14 +1193,27 @@ const SheetStudio = {
     },
 
     renderSaveModalTags() {
-        const container = document.getElementById('sheet-tags-checkboxes');
-        container.innerHTML = '';
+        const foldersContainer = document.getElementById('save-sheet-folders-checkboxes');
+        foldersContainer.innerHTML = '';
+        const currentFolderIds = this.currentSheetId ? (this.allSheets.find(s => s.id === this.currentSheetId)?.folderIds || []) : [];
+        
+        this.allSheetFolders.forEach(f => {
+            const row = document.createElement('label');
+            row.style.cssText = "display:flex; gap:10px; cursor:pointer; color:var(--color-text);";
+            row.innerHTML = `<input type="checkbox" value="${f.id}" class="save-folder-checkbox" ${currentFolderIds.includes(f.id) ? 'checked' : ''} style="accent-color: var(--color-primary);"> ${f.name}`;
+            foldersContainer.appendChild(row);
+        });
+
+        const tagsContainer = document.getElementById('sheet-tags-checkboxes');
+        tagsContainer.innerHTML = '';
+        const currentTagIds = this.currentSheetId ? (this.allSheets.find(s => s.id === this.currentSheetId)?.tagIds || []) : [];
+
         this.allSheetTags.forEach(t => {
             const row = document.createElement('div');
             row.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;";
             row.innerHTML = `
                 <label style="display:flex; gap:10px; cursor:pointer; color:var(--color-text);">
-                    <input type="checkbox" value="${t.id}"> ${t.name}
+                    <input type="checkbox" value="${t.id}" class="save-tag-checkbox" ${currentTagIds.includes(t.id) ? 'checked' : ''} style="accent-color: var(--color-primary);"> ${t.name}
                 </label>
                 <button class="btn-icon danger" style="padding:2px; width:22px; height:22px;" title="Supprimer définitivement le tag"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg></button>
             `;
@@ -961,21 +1223,91 @@ const SheetStudio = {
                     await orbDB.db.transaction(['sheetTags'], 'readwrite').objectStore('sheetTags').delete(t.id);
                     this.allSheetTags = await orbDB.getAllSheetTags();
                     this.renderSaveModalTags();
-                    this.renderStorageTagsManager();
                     this.loadData(); 
                 }
             };
-            container.appendChild(row);
+            tagsContainer.appendChild(row);
         });
     },
 
     async saveSheet() {
         const name = document.getElementById('sheet-name-input').value || "Nouvelle Fiche";
-        const tagIds = Array.from(document.querySelectorAll('#sheet-tags-checkboxes input:checked')).map(cb => parseInt(cb.value, 10));
-        await orbDB.saveSheet({ name, tagIds, pages: this.serializePages() }, this.currentSheetId);
+        const tagIds = Array.from(document.querySelectorAll('.save-tag-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+        const folderIds = Array.from(document.querySelectorAll('.save-folder-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+        
+        await orbDB.saveSheet({ name, tagIds, folderIds, pages: this.serializePages() }, this.currentSheetId);
         
         document.getElementById('save-sheet-modal').classList.add('hidden');
         await this.loadData();
+        this.renderStorageList();
+        
+        const btnUpdate = document.getElementById('btn-update-sheet');
+        if(btnUpdate) btnUpdate.style.display = 'inline-block';
+    },
+
+    async updateSheet() {
+        if (!this.currentSheetId) return;
+        const sheet = this.allSheets.find(s => s.id === this.currentSheetId);
+        if (!sheet) return;
+        
+        const data = {
+            name: sheet.name,
+            tagIds: sheet.tagIds,
+            folderIds: sheet.folderIds,
+            pages: this.serializePages()
+        };
+
+        await orbDB.saveSheet(data, this.currentSheetId);
+        await this.loadData();
+        this.renderStorageList();
+        
+        const btnUpdate = document.getElementById('btn-update-sheet');
+        if(btnUpdate) {
+            const originalText = btnUpdate.textContent;
+            btnUpdate.textContent = "Mis à jour ! ✓";
+            btnUpdate.style.background = "#4CAF50";
+            btnUpdate.style.color = "#fff";
+            setTimeout(() => {
+                btnUpdate.textContent = originalText;
+                btnUpdate.style.background = "var(--color-primary)";
+                btnUpdate.style.color = "#111";
+            }, 2000);
+        }
+    },
+
+    renderAssignModal(sheet) {
+        if (!sheet) return;
+        document.getElementById('assign-sheet-title').textContent = `Classer : ${sheet.name}`;
+        const playbookFolderIds = new Set(sheet.folderIds || []);
+        const playbookTagIds = new Set(sheet.tagIds || []);
+        
+        const assignFoldersList = document.getElementById('assign-sheet-folders-list');
+        assignFoldersList.innerHTML = '';
+        if (this.allSheetFolders.length === 0) {
+            assignFoldersList.innerHTML = '<p style="font-size:0.9em; opacity:0.7;">Aucun dossier créé.</p>';
+        } else {
+            this.allSheetFolders.forEach(folder => {
+                const isChecked = playbookFolderIds.has(folder.id);
+                const label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em;';
+                label.innerHTML = `<input type="checkbox" value="${folder.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--color-primary);"><span>${folder.name}</span>`;
+                assignFoldersList.appendChild(label);
+            });
+        }
+
+        const assignTagsList = document.getElementById('assign-sheet-tags-list');
+        assignTagsList.innerHTML = '';
+        if (this.allSheetTags.length === 0) {
+            assignTagsList.innerHTML = '<p style="font-size:0.9em; opacity:0.7;">Aucun tag créé.</p>';
+        } else {
+            this.allSheetTags.forEach(tag => {
+                const isChecked = playbookTagIds.has(tag.id);
+                const label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em;';
+                label.innerHTML = `<input type="checkbox" value="${tag.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--color-primary);"><span>${tag.name}</span>`;
+                assignTagsList.appendChild(label);
+            });
+        }
     },
 
     async exportToPDF() {

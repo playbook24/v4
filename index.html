@@ -170,7 +170,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 
-                if (!confirm("⚠️ ATTENTION : La restauration d'une sauvegarde va ÉCRASER et REMPLACER toutes vos données actuelles. Voulez-vous vraiment continuer ?")) {
+                if (!confirm("ATTENTION : La restauration d'une sauvegarde va ÉCRASER et REMPLACER toutes vos données actuelles. Voulez-vous vraiment continuer ?")) {
                     e.target.value = ''; return;
                 }
 
@@ -246,7 +246,7 @@
                         clearAndAdd('sheetTags', dataToImport.sheetTags);
 
                         tx.oncomplete = () => {
-                            alert("✅ Restauration réussie avec tous les aperçus !");
+                            alert("Restauration réussie avec tous les aperçus !");
                             window.location.reload(); 
                         };
                     } catch (err) {

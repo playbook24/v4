@@ -115,34 +115,60 @@ const RosterModule = {
             return;
         }
 
-        const teamEvents = events.filter(e => e.teamId === this.currentTeamId && e.attendance && Object.keys(e.attendance).length > 0);
-        const totalSessions = teamEvents.length;
+        const teamEvents = events.filter(e => 
+            e.attendance && 
+            Object.keys(e.attendance).length > 0 && 
+            (e.teamId === this.currentTeamId || (e.teamIds && e.teamIds.includes(this.currentTeamId)))
+        );
+
+        const matchEvents = teamEvents.filter(e => e.type === 'match');
+        const trainingEvents = teamEvents.filter(e => !e.type || e.type === 'training');
+
+        const computeAtt = (pId, evts) => {
+            let present = 0;
+            let active = 0;
+            evts.forEach(e => {
+                const stat = e.attendance[pId];
+                if (stat === 'present') { present++; active++; }
+                else if (stat === 'absent') { active++; }
+            });
+            return active > 0 ? { perc: Math.round((present / active) * 100), str: `(${present}/${active})` } : null;
+        };
 
         teamPlayers.forEach(p => {
-            let presentCount = 0;
-            teamEvents.forEach(e => {
-                if (e.attendance[p.id] === 'present') presentCount++;
-            });
+            const globalAtt = computeAtt(p.id, teamEvents);
+            const trainAtt = computeAtt(p.id, trainingEvents);
+            const matchAtt = computeAtt(p.id, matchEvents);
 
-            let attendanceStr = "<span style='opacity: 0.5;'>Aucune donnée</span>";
-            if (totalSessions > 0) {
-                const percent = Math.round((presentCount / totalSessions) * 100);
-                attendanceStr = `<span style="color: var(--color-primary); font-weight: bold; font-size: 1.2em;">${percent}%</span> <span style="opacity: 0.7;">(${presentCount}/${totalSessions})</span>`;
-            }
+            const formatAtt = (attObj) => attObj 
+                ? `<span style="color:var(--color-primary); font-weight:bold;">${attObj.perc}%</span> <span style="opacity:0.7; font-size:0.85em;">${attObj.str}</span>`
+                : `<span style="opacity:0.5; font-size:0.85em;">-</span>`;
 
             const card = document.createElement('div');
             card.className = 'roster-card';
-            card.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+            card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;';
             
             card.innerHTML = `
-                <div class="player-info" style="flex-grow: 1;">
+                <div class="player-info" style="flex-grow: 1; min-width: 150px;">
                     <div class="player-name" style="font-weight: bold; font-size: 1.1em; color: var(--color-text);">${p.lastName.toUpperCase()} ${p.firstName}</div>
                     <div class="player-license" style="font-size: 0.9em; opacity: 0.7; margin-top: 5px;">Licence : ${p.license || '-'}</div>
                 </div>
-                <div style="text-align: right; margin-right: 25px;">
-                    <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Présence</div>
-                    <div>${attendanceStr}</div>
+                
+                <div style="display:flex; gap: 15px; flex-wrap: wrap; text-align: center;">
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--color-border); border-radius:6px; padding:8px 12px;">
+                        <div style="font-size:0.7em; text-transform:uppercase; letter-spacing:1px; opacity:0.6; margin-bottom:5px;">Entraînements</div>
+                        <div>${formatAtt(trainAtt)}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--color-border); border-radius:6px; padding:8px 12px;">
+                        <div style="font-size:0.7em; text-transform:uppercase; letter-spacing:1px; opacity:0.6; margin-bottom:5px;">Matchs</div>
+                        <div>${formatAtt(matchAtt)}</div>
+                    </div>
+                    <div style="background:var(--color-container); border:1px dashed var(--color-primary); border-radius:6px; padding:8px 12px;">
+                        <div style="font-size:0.7em; text-transform:uppercase; letter-spacing:1px; opacity:0.6; margin-bottom:5px;">Global</div>
+                        <div>${formatAtt(globalAtt)}</div>
+                    </div>
                 </div>
+                
                 <button title="Supprimer ce joueur" style="background: transparent; border: none; cursor: pointer; color: var(--color-primary); padding: 5px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="RosterModule.deletePlayer(${p.id})">
                     <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: currentColor;"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2 2 0 0,0 8,21H16A2 2 0 0,0 18,19V7H6V19Z"/></svg>
                 </button>

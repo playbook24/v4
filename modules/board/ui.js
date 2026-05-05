@@ -649,7 +649,7 @@ window.ORB.ui = {
 
                 const newId = await orbDB.savePlaybook(data, base64Preview, targetId);
                 window.ORB.appState.currentLoadedPlaybookId = newId;
-                alert(isNewCopy ? '✅ Copie sauvegardée avec succès !' : '✅ Exercice mis à jour !');
+                alert(isNewCopy ? 'Copie sauvegardée avec succès !' : 'Exercice mis à jour !');
                 if (modal) modal.classList.add('hidden');
             } catch (err) {
                 console.error(err);

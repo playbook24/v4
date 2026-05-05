@@ -510,7 +510,7 @@
                 // Tags Globaux
                 const globalTags = allTags.filter(t => t.folderId == null);
                 if (globalTags.length > 0) {
-                    hasTags = true; appendTagGroup(assignTagsList, "🌐 Tags Globaux", globalTags, playbookTagIds);
+                    hasTags = true; appendTagGroup(assignTagsList, "Tags Globaux", globalTags, playbookTagIds);
                 }
 
                 // Tags des dossiers sélectionnés
@@ -518,7 +518,7 @@
                     const folder = allFolders.find(f => f.id === fId);
                     const fTags = allTags.filter(t => t.folderId === fId);
                     if (fTags.length > 0 && folder) {
-                        hasTags = true; appendTagGroup(assignTagsList, `📁 Tags : ${folder.name}`, fTags, playbookTagIds);
+                        hasTags = true; appendTagGroup(assignTagsList, `Tags : ${folder.name}`, fTags, playbookTagIds);
                     }
                 });
 

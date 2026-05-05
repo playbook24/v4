@@ -24,7 +24,17 @@ const CalendarModule = {
         this.grid = document.getElementById('calendar-grid');
         this.monthDisplay = document.getElementById('cal-month-display');
         this.modal = document.getElementById('event-editor-modal');
-        this.teamSelect = document.getElementById('event-team-select');
+        this.teamsContainer = document.getElementById('event-teams-container');
+        this.teamsDropdownBtn = document.getElementById('event-teams-dropdown-btn');
+        this.teamsDropdownMenu = document.getElementById('event-teams-dropdown-menu');
+        this.teamsDropdownLabel = document.getElementById('event-teams-dropdown-label');
+        this.eventTypeSelect = document.getElementById('event-type-select');
+        this.matchFieldsContainer = document.getElementById('match-fields-container');
+        this.trainingPlanContainer = document.getElementById('training-plan-container');
+        this.matchOpponent = document.getElementById('match-opponent');
+        this.matchScoreUs = document.getElementById('match-score-us');
+        this.matchScoreThem = document.getElementById('match-score-them');
+        this.eventTitleLabel = document.getElementById('event-title-label');
         
         this.planPickerModal = document.getElementById('plan-picker-modal');
         this.planPickerList = document.getElementById('plan-picker-list');
@@ -78,6 +88,58 @@ const CalendarModule = {
                 document.getElementById('event-repeat-until').disabled = !e.target.checked;
             };
         }
+
+        if (this.eventTypeSelect) {
+            this.eventTypeSelect.onchange = () => this.updateEventTypeUI();
+        }
+
+        if (this.teamsDropdownBtn) {
+            this.teamsDropdownBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.teamsDropdownMenu.classList.toggle('hidden');
+            };
+            document.addEventListener('click', (e) => {
+                if (!this.teamsDropdownBtn.contains(e.target) && !this.teamsDropdownMenu.contains(e.target)) {
+                    this.teamsDropdownMenu.classList.add('hidden');
+                }
+            });
+        }
+    },
+
+    updateTeamsDropdownLabel() {
+        if (!this.teamsDropdownLabel) return;
+        const checkboxes = this.teamsContainer.querySelectorAll('.team-checkbox');
+        let count = 0;
+        let firstCheckedName = '';
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                count++;
+                if (count === 1) firstCheckedName = cb.nextSibling.textContent;
+            }
+        });
+        if (count === 0) {
+            this.teamsDropdownLabel.textContent = "Sélectionner les équipes...";
+        } else if (count === 1) {
+            this.teamsDropdownLabel.textContent = firstCheckedName;
+        } else {
+            this.teamsDropdownLabel.textContent = `${count} équipes sélectionnées`;
+        }
+    },
+
+    updateEventTypeUI() {
+        const type = this.eventTypeSelect.value;
+        const repeatContainer = document.getElementById('event-repeat-container');
+        if (type === 'match') {
+            this.matchFieldsContainer.classList.remove('hidden');
+            this.trainingPlanContainer.classList.add('hidden');
+            this.eventTitleLabel.textContent = "Titre du match";
+            if (repeatContainer) repeatContainer.style.display = 'none';
+        } else {
+            this.matchFieldsContainer.classList.add('hidden');
+            this.trainingPlanContainer.classList.remove('hidden');
+            this.eventTitleLabel.textContent = "Titre de la séance";
+            if (repeatContainer && !this.currentEvent.id) repeatContainer.style.display = 'flex';
+        }
     },
 
     async render() {
@@ -123,13 +185,20 @@ const CalendarModule = {
                 const hasPlan = !!(e.planSnapshot);
                 const hasAttendance = e.attendance && Object.keys(e.attendance).length > 0;
                 
-                // CORRECTION : Icônes NOIRES pour contraster avec le bandeau or (#000000)
+                const isMatch = e.type === 'match';
                 let iconsHtml = '';
-                if (hasPlan) iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Entraînement lié"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"/></svg>`;
+                if (isMatch) {
+                    iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Match"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,13.75 19.43,15.38 18.45,16.7L16.5,14.77C16.82,13.92 17,13 17,12A5,5 0 0,0 12,7C11,7 10.08,7.18 9.23,7.5L7.3,5.55C8.62,4.57 10.25,4 12,4M5.55,7.3L7.5,9.23C7.18,10.08 7,11 7,12A5,5 0 0,0 12,17C13,17 13.92,16.82 14.77,16.5L16.7,18.45C15.38,19.43 13.75,20 12,20A8,8 0 0,1 4,12C4,10.25 4.57,8.62 5.55,7.3Z"/></svg>`;
+                } else {
+                    if (hasPlan) iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Entraînement lié"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"/></svg>`;
+                }
                 if (hasAttendance) iconsHtml += `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:#000000; flex-shrink:0;" title="Appel effectué"><path d="M21.1,12.5L22.5,13.91L15.97,20.5L12.5,17L13.9,15.59L15.97,17.67L21.1,12.5M10,17L13,20H3V18C3,15.79 6.58,14 10.5,14C10.89,14 11.27,14 11.64,14.07L10.59,15.12C10.56,15.11 10.53,15.11 10.5,15.11C8.25,15.11 5.37,16.05 4.88,17H10M10.5,12C8.57,12 6.69,10.43 6.69,8.5C6.69,6.57 8.57,5 10.5,5C12.43,5 14.31,6.57 14.31,8.5C14.31,10.43 12.43,12 10.5,12M10.5,10.11C11.5,10.11 12.41,9.25 12.41,8.5C12.41,7.75 11.5,6.89 10.5,6.89C9.5,6.89 8.59,7.75 8.59,8.5C8.59,9.25 9.5,10.11 10.5,10.11Z"/></svg>`;
 
+                let displayTitle = e.title || 'Séance';
+                if (isMatch && e.score) displayTitle += ` (${e.score})`;
+
                 chip.innerHTML = `
-                    <span style="flex: 1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.title || 'Séance'}</span>
+                    <span style="flex: 1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayTitle}</span>
                     <div style="flex: 0 0 auto; display:flex; align-items:center; gap:5px; margin-left: 5px;">${iconsHtml}</div>
                 `;
                 
@@ -148,11 +217,26 @@ const CalendarModule = {
         document.getElementById('event-date-display').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
         
         const teams = await orbDB.getAllTeams();
-        
-        // NOUVEAU : Option par défaut "Aucune équipe"
-        let selectHtml = `<option value="">-- Aucune équipe --</option>`;
-        selectHtml += teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        this.teamSelect.innerHTML = selectHtml;
+        this.teamsContainer.innerHTML = '';
+        teams.forEach(t => {
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '8px';
+            label.style.cursor = 'pointer';
+            
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = t.id;
+            cb.className = 'team-checkbox';
+            cb.style.accentColor = 'var(--color-primary)';
+            
+            cb.addEventListener('change', () => this.updateTeamsDropdownLabel());
+            
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(t.name));
+            this.teamsContainer.appendChild(label);
+        });
         
         const events = await orbDB.getAllCalendarEvents();
         
@@ -167,11 +251,15 @@ const CalendarModule = {
 
         if (existingEvent) {
             this.currentEvent = { ...existingEvent };
+            if(!this.currentEvent.teamIds) {
+                this.currentEvent.teamIds = this.currentEvent.teamId ? [this.currentEvent.teamId] : [];
+            }
             if(!this.currentEvent.attendance) this.currentEvent.attendance = {};
+            if(!this.currentEvent.type) this.currentEvent.type = 'training';
             if (repeatContainer) repeatContainer.style.display = 'none';
         } else {
             this.currentEvent = {
-                id: null, date: dateStr, title: '', teamId: null, notes: '', planSnapshot: null, attendance: {}
+                id: null, date: dateStr, title: '', type: 'training', teamIds: [], opponent: '', score: '', notes: '', planSnapshot: null, attendance: {}
             };
             if (repeatContainer) {
                 repeatContainer.style.display = 'flex';
@@ -181,9 +269,28 @@ const CalendarModule = {
             }
         }
 
+        const checkboxes = this.teamsContainer.querySelectorAll('.team-checkbox');
+        checkboxes.forEach(cb => {
+            if (this.currentEvent.teamIds.includes(parseInt(cb.value, 10))) {
+                cb.checked = true;
+            }
+        });
+        this.updateTeamsDropdownLabel();
+
         document.getElementById('event-title').value = this.currentEvent.title;
         document.getElementById('event-notes').value = this.currentEvent.notes || '';
-        this.teamSelect.value = this.currentEvent.teamId || ""; // Sélectionne "Aucune" si c'est null
+        this.matchOpponent.value = this.currentEvent.opponent || '';
+        if (this.currentEvent.score) {
+            const parts = this.currentEvent.score.split('-');
+            this.matchScoreUs.value = parts[0] ? parts[0].trim() : '';
+            this.matchScoreThem.value = parts[1] ? parts[1].trim() : '';
+        } else {
+            this.matchScoreUs.value = '';
+            this.matchScoreThem.value = '';
+        }
+        
+        this.eventTypeSelect.value = this.currentEvent.type;
+        this.updateEventTypeUI();
 
         await this.updatePlanUI();
         this.updateAttendanceSummary();
@@ -330,34 +437,48 @@ const CalendarModule = {
     },
 
     async openAttendanceModal() {
-        const teamId = parseInt(this.teamSelect.value, 10);
-        // NOUVEAU : Blocage si aucune équipe sélectionnée
-        if (isNaN(teamId) || !teamId) return alert("Veuillez d'abord sélectionner une équipe dans la liste déroulante pour pouvoir faire l'appel.");
-        
-        this.currentEvent.teamId = teamId; 
+        const checkboxes = this.teamsContainer.querySelectorAll('.team-checkbox');
+        const selectedIds = [];
+        checkboxes.forEach(cb => { if(cb.checked) selectedIds.push(parseInt(cb.value, 10)); });
+        this.currentEvent.teamIds = selectedIds;
+
+        const teamIds = this.currentEvent.teamIds || [];
+        if (teamIds.length === 0) return alert("Veuillez d'abord sélectionner une ou plusieurs équipes pour pouvoir faire l'appel.");
 
         const players = await orbDB.getAllPlayers();
-        const teamPlayers = players.filter(p => p.teamId === teamId);
+        const teamPlayers = players.filter(p => teamIds.includes(p.teamId));
         
         this.attendanceList.innerHTML = '';
         
         if(teamPlayers.length === 0) {
-            this.attendanceList.innerHTML = '<p style="text-align:center; opacity:0.6;">Aucun joueur dans cette équipe. Ajoutez-en via le menu Effectif.</p>';
+            this.attendanceList.innerHTML = '<p style="text-align:center; opacity:0.6;">Aucun joueur dans les équipes sélectionnées. Ajoutez-en via le menu Effectif.</p>';
         } else {
             teamPlayers.forEach(p => {
                 const status = this.currentEvent.attendance[p.id] || 'absent'; 
-                const isChecked = status === 'present' ? 'checked' : '';
                 
                 const div = document.createElement('div');
-                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--color-border);';
+                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; gap: 10px;';
                 
                 div.innerHTML = `
-                    <span style="font-weight: bold; font-size: 1.1em; color: var(--color-text);">${p.lastName.toUpperCase()} ${p.firstName}</span>
-                    <label style="cursor:pointer; display:flex; align-items:center; gap:10px; font-weight:bold; color:var(--color-primary); background:rgba(255,255,255,0.05); padding:8px 15px; border-radius:8px; border:1px solid var(--color-border);">
-                        <input type="checkbox" class="att-checkbox" data-id="${p.id}" style="width:20px; height:20px; accent-color:var(--color-primary);" ${isChecked}>
-                        Présent
-                    </label>
+                    <span style="font-weight: bold; font-size: 1.1em; color: var(--color-text); min-width: 150px;">${p.lastName.toUpperCase()} ${p.firstName}</span>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-weight:bold; color:var(--color-primary); background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:6px; border:1px solid var(--color-border);">
+                            <input type="checkbox" class="att-cb-present" data-id="${p.id}" style="width:16px; height:16px; accent-color:var(--color-primary);" ${status === 'present' ? 'checked' : ''}>
+                            Présent
+                        </label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-weight:bold; color:#d9534f; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:6px; border:1px solid var(--color-border);">
+                            <input type="checkbox" class="att-cb-injured" data-id="${p.id}" style="width:16px; height:16px; accent-color:#d9534f;" ${status === 'injured' ? 'checked' : ''}>
+                            Blessé
+                        </label>
+                    </div>
                 `;
+                
+                const cbPresent = div.querySelector('.att-cb-present');
+                const cbInjured = div.querySelector('.att-cb-injured');
+                
+                cbPresent.addEventListener('change', () => { if (cbPresent.checked) cbInjured.checked = false; });
+                cbInjured.addEventListener('change', () => { if (cbInjured.checked) cbPresent.checked = false; });
+
                 this.attendanceList.appendChild(div);
             });
         }
@@ -365,11 +486,20 @@ const CalendarModule = {
     },
 
     saveAttendance() {
-        const checkboxes = this.attendanceList.querySelectorAll('.att-checkbox');
+        const rows = this.attendanceList.querySelectorAll('.att-cb-present');
         const newAttendance = {};
         
-        checkboxes.forEach(chk => {
-            newAttendance[chk.dataset.id] = chk.checked ? 'present' : 'absent';
+        rows.forEach(cbPresent => {
+            const id = cbPresent.dataset.id;
+            const cbInjured = this.attendanceList.querySelector(`.att-cb-injured[data-id="${id}"]`);
+            
+            if (cbPresent.checked) {
+                newAttendance[id] = 'present';
+            } else if (cbInjured && cbInjured.checked) {
+                newAttendance[id] = 'injured';
+            } else {
+                newAttendance[id] = 'absent';
+            }
         });
         
         this.currentEvent.attendance = newAttendance;
@@ -386,14 +516,35 @@ const CalendarModule = {
         }
         const present = Object.values(att).filter(v => v === 'present').length;
         const absent = Object.values(att).filter(v => v === 'absent').length;
+        const injured = Object.values(att).filter(v => v === 'injured').length;
         
-        this.attendanceSummary.innerHTML = `<span style="color:var(--color-primary); font-weight:bold;">${present} Présent(s)</span> | <span style="opacity:0.6">${absent} Absent(s)</span>`;
+        const totalActive = present + absent; // blessés ne comptent pas dans le pourcentage
+        let perc = 0;
+        if(totalActive > 0) perc = Math.round((present / totalActive) * 100);
+        
+        this.attendanceSummary.innerHTML = `<span style="color:var(--color-primary); font-weight:bold;">${perc}% présents</span> | ${present} Présent(s) | <span style="opacity:0.6">${absent} Absent(s)</span> | <span style="color:#d9534f">${injured} Blessé(s)</span>`;
     },
 
     async saveEvent() {
         this.currentEvent.title = document.getElementById('event-title').value;
-        const selectedVal = this.teamSelect.value;
-        this.currentEvent.teamId = selectedVal ? parseInt(selectedVal, 10) : null;
+        
+        const checkboxes = this.teamsContainer.querySelectorAll('.team-checkbox');
+        const selectedIds = [];
+        checkboxes.forEach(cb => { if(cb.checked) selectedIds.push(parseInt(cb.value, 10)); });
+        this.currentEvent.teamIds = selectedIds;
+        this.currentEvent.teamId = selectedIds.length > 0 ? selectedIds[0] : null; 
+
+        this.currentEvent.type = this.eventTypeSelect.value;
+        this.currentEvent.opponent = this.matchOpponent.value;
+        
+        const us = this.matchScoreUs.value.trim();
+        const them = this.matchScoreThem.value.trim();
+        if (us || them) {
+            this.currentEvent.score = `${us || '0'} - ${them || '0'}`;
+        } else {
+            this.currentEvent.score = '';
+        }
+        
         this.currentEvent.notes = document.getElementById('event-notes').value;
         
         if (!this.currentEvent.title) return alert("Le titre est obligatoire.");

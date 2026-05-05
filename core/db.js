@@ -12,7 +12,7 @@ class ORBDatabase {
     async open() {
         return new Promise((resolve, reject) => {
             if (this.db) { resolve(this.db); return; }
-            const request = indexedDB.open(this.dbName, 10); 
+            const request = indexedDB.open(this.dbName, 11); 
             request.onerror = (e) => { console.error("Erreur d'ouverture BDD", e); reject("Erreur BDD"); };
             request.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
             request.onupgradeneeded = (e) => {
@@ -27,6 +27,7 @@ class ORBDatabase {
                 if (!db.objectStoreNames.contains('sheetTags')) db.createObjectStore('sheetTags', { keyPath: 'id', autoIncrement: true });
                 if (!db.objectStoreNames.contains('folders')) db.createObjectStore('folders', { keyPath: 'id', autoIncrement: true });
                 if (!db.objectStoreNames.contains('planFolders')) db.createObjectStore('planFolders', { keyPath: 'id', autoIncrement: true });
+                if (!db.objectStoreNames.contains('sheetFolders')) db.createObjectStore('sheetFolders', { keyPath: 'id', autoIncrement: true });
             };
         });
     }
@@ -222,9 +223,23 @@ class ORBDatabase {
     // --- FICHES PDF (SHEETS) ---
     async saveSheet(data, id = null) {
         if (!this.db) await this.open();
+        let existingFolderIds = [];
+        if (id) {
+            try {
+                const existing = await new Promise(resolve => {
+                    this.db.transaction(['sheets'], 'readonly').objectStore('sheets').get(id).onsuccess = e => resolve(e.target.result);
+                });
+                if (existing) {
+                    existingFolderIds = data.folderIds !== undefined ? data.folderIds : (existing.folderIds || []);
+                }
+            } catch(e) {}
+        } else {
+            if (data.folderIds) existingFolderIds = data.folderIds;
+        }
+
         return new Promise((res, rej) => {
             const s = this.db.transaction(['sheets'], 'readwrite').objectStore('sheets');
-            const dataToSave = { ...data };
+            const dataToSave = { ...data, folderIds: existingFolderIds };
             if (id) dataToSave.id = id; else delete dataToSave.id;
             const req = id ? s.put(dataToSave) : s.add(dataToSave);
             req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; 
@@ -255,5 +270,10 @@ class ORBDatabase {
             this.db.transaction(['sheetTags'], 'readonly').objectStore('sheetTags').getAll().onsuccess = e => res(e.target.result); 
         }); 
     }
+
+    // --- DOSSIERS DES FICHES PDF (SHEETFOLDERS) ---
+    async getAllSheetFolders() { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['sheetFolders'], 'readonly').objectStore('sheetFolders').getAll().onsuccess = e => res(e.target.result); }); }
+    async addSheetFolder(name) { if (!this.db) await this.open(); return new Promise((res, rej) => { const req = this.db.transaction(['sheetFolders'], 'readwrite').objectStore('sheetFolders').add({name}); req.onsuccess = e => { this._triggerSync(); res(e.target.result); }; req.onerror = e => rej(e);}); }
+    async deleteSheetFolder(id) { if (!this.db) await this.open(); return new Promise(res => { this.db.transaction(['sheetFolders'], 'readwrite').objectStore('sheetFolders').delete(id).onsuccess = () => { this._triggerSync(); res(true); }; }); }
 }
 const orbDB = new ORBDatabase();

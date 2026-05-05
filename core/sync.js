@@ -148,7 +148,7 @@ const ORBSync = {
         if (this.isManualLogin) {
             this.isManualLogin = false;
             setTimeout(() => {
-                if (confirm("☁️ Connexion Drive réussie !\n\nVoulez-vous charger la base de données sauvegardée sur votre Cloud vers cet appareil ?\n\n(Attention : Vos données locales actuelles seront écrasées)")) {
+                if (confirm("Connexion Drive réussie !\n\nVoulez-vous charger la base de données sauvegardée sur votre Cloud vers cet appareil ?\n\n(Attention : Vos données locales actuelles seront écrasées)")) {
                     const pullBtn = document.getElementById('btn-drive-pull');
                     if (pullBtn) pullBtn.click();
                     else this.downloadFromDrive();
@@ -209,7 +209,7 @@ const ORBSync = {
         if (!this.fileId) return false;
 
         try {
-            this.showToast("☁️ Sauvegarde en cours...");
+            this.showToast("Sauvegarde en cours...");
 
             // 🟢 NOUVEAU : Ajout de "folders" à la sauvegarde
             const backupData = {
@@ -222,7 +222,8 @@ const ORBSync = {
                 players: await orbDB.getAllPlayers(),
                 teams: await orbDB.getAllTeams(),
                 sheets: await orbDB.getAllSheets(),
-                sheetTags: await orbDB.getAllSheetTags()
+                sheetTags: await orbDB.getAllSheetTags(),
+                sheetFolders: await orbDB.getAllSheetFolders()
             };
 
             await fetch(`https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=media`, {
@@ -234,12 +235,12 @@ const ORBSync = {
                 body: JSON.stringify(backupData)
             });
             
-            this.showToast("✅ Sauvegardé sur Drive !", true);
+            this.showToast("Sauvegardé sur Drive !", true);
             
             const pushBtn = document.getElementById('btn-drive-push');
             if (pushBtn) {
                 let oldText = pushBtn.innerHTML;
-                pushBtn.innerHTML = "✅ Sauvegardé !";
+                pushBtn.innerHTML = "Sauvegardé !";
                 pushBtn.style.background = "#BFA98D";
                 pushBtn.style.color = "#111111";
                 setTimeout(() => {
@@ -252,7 +253,7 @@ const ORBSync = {
             return true;
         } catch(e) {
             console.error("Erreur d'upload :", e);
-            this.showToast("❌ Erreur de sauvegarde");
+            this.showToast("Erreur de sauvegarde");
             return false;
         }
     },
@@ -266,7 +267,7 @@ const ORBSync = {
         if (!this.fileId) return false;
 
         try {
-            this.showToast("☁️ Téléchargement...");
+            this.showToast("Téléchargement...");
 
             const response = await gapi.client.drive.files.get({
                 fileId: this.fileId,
@@ -277,7 +278,7 @@ const ORBSync = {
             
             if (data && typeof data === 'object') {
                 // 🟢 NOUVEAU : Ajout de "folders" dans la transaction de restauration
-                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'planFolders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags'], 'readwrite');
+                const tx = orbDB.db.transaction(['playbooks', 'trainingPlans', 'tags', 'folders', 'planFolders', 'calendarEvents', 'players', 'teams', 'sheets', 'sheetTags', 'sheetFolders'], 'readwrite');
                 
                 const clearAndAdd = (storeName, items) => {
                     const store = tx.objectStore(storeName);
@@ -295,16 +296,17 @@ const ORBSync = {
                 clearAndAdd('teams', data.teams);
                 clearAndAdd('sheets', data.sheets);
                 clearAndAdd('sheetTags', data.sheetTags);
+                clearAndAdd('sheetFolders', data.sheetFolders);
                 
                 tx.oncomplete = () => {
-                    this.showToast("✅ Restauration réussie !", true);
+                    this.showToast("Restauration réussie !", true);
                     setTimeout(() => window.location.reload(), 1000); 
                 };
             }
             return true;
         } catch(e) {
             console.error("Erreur de téléchargement :", e);
-            this.showToast("❌ Erreur de téléchargement");
+            this.showToast("Erreur de téléchargement");
             return false;
         }
     }

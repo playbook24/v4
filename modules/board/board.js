@@ -216,10 +216,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         req.onsuccess = res;
                     });
                 }
-                alert("✅ Tous les aperçus ont été regénérés avec succès !");
+                alert("Tous les aperçus ont été regénérés avec succès !");
             } catch (e) {
                 console.error(e);
-                alert("❌ Erreur pendant la mise à jour massive.");
+                alert("Erreur pendant la mise à jour massive.");
             }
             window.location.href = '../library/library.html';
         }, 800);
