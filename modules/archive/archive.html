@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORB - Archives</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../style.css">
+    <link rel="stylesheet" href="archive.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content" style="display: flex; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%;">
+            <a href="../../index.html" onclick="sessionStorage.clear()" class="btn-icon header-back-btn" style="padding: 0; display: flex; align-items: center; text-decoration: none;" title="Accueil">
+                <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
+            </a>
+            <h1 style="margin: 0; text-align: center; flex-grow: 1; padding-right: 40px;">ORB <span class="highlight">ARCHIVES</span></h1>
+        </div>
+    </header>
+
+    <main id="main-view" style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: var(--color-primary); font-family: 'Anton';">Équipes Archivées</h2>
+        </div>
+        <div id="archive-list" class="archive-grid"></div>
+    </main>
+
+    <main id="detail-view" class="hidden" style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="btn-back-archive" class="btn-icon" style="padding: 0; background: transparent; border: none; cursor: pointer; color: var(--color-text);" title="Retour">
+                    <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
+                </button>
+                <h2 id="detail-title" style="margin: 0; color: var(--color-primary); font-family: 'Anton';">Nom de l'équipe</h2>
+            </div>
+            <button id="btn-unarchive-team" class="btn-primary" style="background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 15px;">Désarchiver l'équipe</button>
+        </div>
+        <div id="roster-list" class="roster-grid"></div>
+    </main>
+
+    <script src="../../core/db.js"></script>
+    <script src="archive.js"></script>
+    <script>
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+        if (localStorage.getItem('teamMode') === 'crab') document.body.classList.add('crab-mode');
+    </script>
+</body>
+</html>

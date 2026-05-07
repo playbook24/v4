@@ -11,8 +11,8 @@ const SheetStudio = {
     currentExoFolderId: null,
     planViewMode: 'FOLDERS',
     currentPlanFolderId: null,
-    sheetViewMode: 'FOLDERS',
-    currentSheetFolderId: null,
+    sheetViewMode: sessionStorage.getItem('sheetViewMode') || 'FOLDERS',
+    currentSheetFolderId: sessionStorage.getItem('sheetFolderId') && sessionStorage.getItem('sheetFolderId') !== 'ALL' ? parseInt(sessionStorage.getItem('sheetFolderId')) : (sessionStorage.getItem('sheetFolderId') || null),
     currentSheetToAssign: null,
     activeTagExo: null, 
     activeTagStorage: null,
@@ -66,6 +66,43 @@ const SheetStudio = {
     },
 
     bindEvents() {
+        document.getElementById('global-back-btn').addEventListener('click', () => {
+            if (this.currentMode === 'viewer') {
+                this.currentMode = null;
+                document.body.classList.remove('viewer-mode');
+                this.switchView('storage');
+            } else if (this.views.editor.classList.contains('active')) {
+                if(confirm("Quitter sans sauvegarder ?")) {
+                    this.currentMode = null;
+                    document.body.classList.remove('viewer-mode');
+                    this.switchView('storage');
+                }
+            } else if (this.views.selectExo.classList.contains('active')) {
+                if (this.exoViewMode === 'PLAYBOOKS') {
+                    this.exoViewMode = 'FOLDERS';
+                    this.currentExoFolderId = null;
+                    this.renderSelectExoView();
+                } else {
+                    this.switchView('storage');
+                }
+            } else if (this.views.selectPlan.classList.contains('active')) {
+                if (this.planViewMode === 'PLANS') {
+                    this.planViewMode = 'FOLDERS';
+                    this.currentPlanFolderId = null;
+                    this.renderSelectPlanList();
+                } else {
+                    this.switchView('storage');
+                }
+            } else if (this.sheetViewMode === 'SHEETS') {
+                this.sheetViewMode = 'FOLDERS';
+                this.currentSheetFolderId = null;
+                this.activeTagStorage = null;
+                this.renderStorageList();
+            } else {
+                window.location.href = '../../index.html';
+            }
+        });
+
         document.getElementById('btn-new-exo-pdf').onclick = () => { 
             this.currentSheetId = null; 
             this.exoViewMode = 'FOLDERS'; 
@@ -422,6 +459,10 @@ const SheetStudio = {
         const btnCreateFolder = document.getElementById('btn-create-sheet-folder');
         const filters = document.getElementById('filter-tags-storage');
         
+        sessionStorage.setItem('sheetViewMode', this.sheetViewMode);
+        if (this.currentSheetFolderId !== null) sessionStorage.setItem('sheetFolderId', this.currentSheetFolderId);
+        else sessionStorage.removeItem('sheetFolderId');
+        
         if (this.sheetViewMode === 'FOLDERS') {
             titleText.textContent = "Vos Dossiers PDF";
             btnBack.style.display = 'none';
@@ -503,6 +544,7 @@ const SheetStudio = {
                     <div style="display: flex; border-top: 1px solid var(--color-border); background: var(--color-container);">
                         <button class="card-btn-assign" title="Classer la fiche" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); color: var(--color-text); transition: background 0.2s;"><svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.4,11.6L20.7,14.4C20.4,15.8 19.2,16.8 17.8,16.8H17.2L12.8,21.2C12.4,21.6 11.7,21.8 11.1,21.6C10.5,21.4 10,20.9 9.8,20.3L9.1,18H4C2.9,18 2,17.1 2,16V4C2,2.9 2.9,2 4,2H16C17.1,2 18,2.9 18,4V10.3L20.8,10.6C21.6,10.7 22.1,11.3 21.9,12.1L21.4,11.6M16,4H4V16H9.4L13.2,19.8L16.8,16.2C17,16.1 17.2,16 17.3,16H18.9L19.4,12H18V10C18,8.9 17.1,8 16,8H15V6C15,4.9 14.1,4 13,4H10V6H13V8H10V10H16V4Z"/></svg></button>
                         <button class="card-btn-delete" title="Supprimer" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); color: var(--color-primary); transition: background 0.2s;"><svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19A2 2 0 0 0 8 21H16A2 2 0 0 0 18 19V7H6V19Z"/></svg></button>
+                        <button class="card-btn-view" title="Visionner la fiche" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; border-right: 1px solid var(--color-border); color: var(--color-text); font-weight:bold; display:flex; justify-content:center; align-items:center; transition: background 0.2s;">Visionner</button>
                         <button class="card-btn-open" title="Ouvrir dans l'éditeur" style="flex: 1; background: transparent; border: none; padding: 12px; cursor: pointer; color: var(--color-primary); font-weight:bold; display:flex; justify-content:center; align-items:center; gap:5px; transition: background 0.2s;">Ouvrir <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:currentColor;"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z" /></svg></button>
                     </div>
                 `;
@@ -530,7 +572,16 @@ const SheetStudio = {
                     this.history = []; this.historyIndex = -1;
                     this.commitState(); 
                 };
-                div.onclick = div.querySelector('.card-btn-open').onclick;
+                div.querySelector('.card-btn-view').onclick = (e) => {
+                    e.stopPropagation();
+                    this.currentSheetId = sheet.id;
+                    this.currentMode = 'viewer';
+                    this.switchView('editor');
+                    this.loadPagesFromData(sheet.pages, true);
+                    this.history = []; this.historyIndex = -1;
+                    document.body.classList.add('viewer-mode');
+                };
+                div.onclick = div.querySelector('.card-btn-view').onclick;
                 this.listStorage.appendChild(div);
             });
         }

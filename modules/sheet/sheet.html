@@ -15,10 +15,15 @@
 <body>
     <header class="app-header">
         <div class="header-content" style="display: flex; align-items: center; max-width: 100%; padding: 0 20px;">
-            <a href="../../index.html" class="btn-icon" title="Quitter le Studio">
-                <svg viewBox="0 0 24 24"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
-            </a>
-            <h1 style="margin: 0; text-align: center; flex-grow: 1;">ORB <span class="highlight">STUDIO PDF</span></h1>
+            <div style="display: flex; gap: 15px; align-items: center; margin-right: 15px;">
+                <button id="global-back-btn" class="btn-icon" style="padding: 0; background: transparent; border: none; cursor: pointer; color: var(--color-text-on-dark);" title="Retour">
+                    <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
+                </button>
+                <a href="../../index.html" onclick="sessionStorage.clear()" class="btn-icon" style="padding: 0; display: flex; align-items: center; text-decoration: none; color: var(--color-text-on-dark);" title="Accueil">
+                    <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+                </a>
+            </div>
+            <h1 style="margin: 0; text-align: center; flex-grow: 1; padding-right: 86px;">ORB <span class="highlight">STUDIO PDF</span></h1>
             
             <div id="editor-top-actions" class="hidden" style="display:flex; gap:10px; align-items: center;">
                 <button id="btn-back-menu" class="btn-icon" title="Retour au menu principal"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> <span style="font-size:0.8em; font-family:'Montserrat', sans-serif; font-weight:bold; margin-left:5px;">Menu</span></button>

@@ -216,14 +216,25 @@ const CalendarModule = {
         const formattedDate = new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         document.getElementById('event-date-display').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
         
-        const teams = await orbDB.getAllTeams();
+        const events = await orbDB.getAllCalendarEvents();
+        let existingEvent = null;
+        if (eventId) {
+            existingEvent = events.find(e => e.id === eventId);
+        }
+
+        const allTeams = await orbDB.getAllTeams();
         this.teamsContainer.innerHTML = '';
-        teams.forEach(t => {
+        allTeams.forEach(t => {
+            // Afficher l'équipe si elle n'est pas archivée OU si elle est déjà sélectionnée dans cet événement
+            const isAssigned = existingEvent && ((existingEvent.teamIds && existingEvent.teamIds.includes(t.id)) || existingEvent.teamId === t.id);
+            if (t.archived === true && !isAssigned) return;
+
             const label = document.createElement('label');
             label.style.display = 'flex';
             label.style.alignItems = 'center';
             label.style.gap = '8px';
             label.style.cursor = 'pointer';
+            if (t.archived === true) label.style.opacity = '0.7'; // Indiquer visuellement qu'elle est archivée
             
             const cb = document.createElement('input');
             cb.type = 'checkbox';
@@ -234,16 +245,9 @@ const CalendarModule = {
             cb.addEventListener('change', () => this.updateTeamsDropdownLabel());
             
             label.appendChild(cb);
-            label.appendChild(document.createTextNode(t.name));
+            label.appendChild(document.createTextNode(t.name + (t.archived === true ? " (Archivée)" : "")));
             this.teamsContainer.appendChild(label);
         });
-        
-        const events = await orbDB.getAllCalendarEvents();
-        
-        let existingEvent = null;
-        if (eventId) {
-            existingEvent = events.find(e => e.id === eventId);
-        }
 
         const repeatContainer = document.getElementById('event-repeat-container');
         const repeatCheckbox = document.getElementById('event-repeat-checkbox');

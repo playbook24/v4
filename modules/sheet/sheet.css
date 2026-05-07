@@ -147,3 +147,12 @@
         aspect-ratio: 794 / 1123;
     }
 }
+
+/* === MODE VISIONNEUSE (LECTURE SEULE) === */
+body.viewer-mode .studio-sidebar { display: none !important; }
+body.viewer-mode #editor-top-actions { display: none !important; }
+body.viewer-mode .draggable-element { pointer-events: none !important; }
+body.viewer-mode .a4-element { pointer-events: none !important; }
+body.viewer-mode .a4-page { pointer-events: none !important; }
+body.viewer-mode .page-delete-btn { display: none !important; }
+body.viewer-mode .studio-workspace { padding: 20px; }

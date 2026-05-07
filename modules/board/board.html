@@ -17,8 +17,11 @@
     <header class="app-header">
         <div class="header-content" style="max-width: 100%; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 15px; align-items: center;">
-                <a href="../../index.html" class="btn-icon" title="Quitter l'éditeur">
+                <button onclick="window.history.back()" class="btn-icon" style="padding: 0; background: transparent; border: none; cursor: pointer; color: var(--color-text-on-dark);" title="Retour">
                     <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
+                </button>
+                <a href="../../index.html" onclick="sessionStorage.clear()" class="btn-icon" style="padding: 0; display: flex; align-items: center; text-decoration: none; color: var(--color-text-on-dark);" title="Accueil">
+                    <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:currentColor;"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
                 </a>
                 <button id="toggle-playbook-manager-btn" class="btn-primary" style="padding: 8px 16px; display: flex; align-items: center; gap: 8px;">
                     <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor;"><path d="M19 2H5C3.9 2 3 2.9 3 4V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V4C21 2.9 20.1 2 19 2M17 18H7V16H17V18M17 14H7V12H17V14M17 10H7V8H17V10Z"/></svg>

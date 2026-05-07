@@ -10,8 +10,8 @@ const PlannerModule = {
     allPlanFolders: [], // NOUVEAU: Dossiers pour les séances
     allPlans: [],       // NOUVEAU: Stocker les séances chargées
 
-    plannerViewMode: 'FOLDERS', // 'FOLDERS' ou 'PLANS'
-    currentPlanFolderId: null,
+    plannerViewMode: sessionStorage.getItem('plannerViewMode') || 'FOLDERS',
+    currentPlanFolderId: sessionStorage.getItem('plannerFolderId') && sessionStorage.getItem('plannerFolderId') !== 'ALL' ? parseInt(sessionStorage.getItem('plannerFolderId')) : (sessionStorage.getItem('plannerFolderId') || null),
     currentPlanToAssign: null,
 
     libViewMode: 'FOLDERS', // 'FOLDERS' ou 'PLAYBOOKS'
@@ -51,6 +51,18 @@ const PlannerModule = {
     },
 
     bindEvents() {
+        document.getElementById('global-back-btn').addEventListener('click', () => {
+            if (!this.editorView.classList.contains('hidden')) {
+                this.closeEditor();
+            } else if (this.plannerViewMode === 'PLANS') {
+                this.plannerViewMode = 'FOLDERS';
+                this.currentPlanFolderId = null;
+                this.loadGrid();
+            } else {
+                window.location.href = '../../index.html';
+            }
+        });
+
         document.getElementById('plan-editor-cancel-btn').onclick = () => this.closeEditor();
         document.getElementById('plan-editor-save-btn').onclick = () => this.savePlan();
         
@@ -86,6 +98,10 @@ const PlannerModule = {
     async loadGrid() {
         this.allPlans = await orbDB.getAllPlans();
         this.allPlanFolders = await orbDB.getAllPlanFolders();
+        
+        sessionStorage.setItem('plannerViewMode', this.plannerViewMode);
+        if (this.currentPlanFolderId !== null) sessionStorage.setItem('plannerFolderId', this.currentPlanFolderId);
+        else sessionStorage.removeItem('plannerFolderId');
 
         if (this.plannerViewMode === 'FOLDERS') {
             this.renderPlanFolders();
@@ -171,9 +187,10 @@ const PlannerModule = {
                     </button>
                 </div>
                 <p style="opacity:0.8; font-size:1em; margin: 15px 0;"><strong style="color:var(--color-text)">${plan.playbookIds.length}</strong> exercices inclus</p>
-                <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button class="btn-primary" style="flex:2; padding:10px;" onclick="PlannerModule.editPlan(${plan.id})">Modifier</button>
-                    <button class="btn-primary" style="flex:1; padding:10px; background:transparent; border:1px solid var(--color-primary); color:var(--color-primary);" onclick="PlannerModule.exportPDF(${plan.id})">PDF</button>
+                <div style="margin-top:20px; display:flex; flex-wrap: wrap; gap:10px;">
+                    <button class="btn-primary" style="flex:1; padding:10px;" onclick="window.location.href='../viewer/viewer.html?type=plan&id=${plan.id}'">Visionner</button>
+                    <button class="btn-primary" style="flex:1; padding:10px; background:transparent; border:1px solid var(--color-primary); color:var(--color-primary);" onclick="PlannerModule.editPlan(${plan.id})">Modifier</button>
+                    <button class="btn-primary" style="flex:1; padding:10px; background:transparent; border:1px solid var(--color-text); color:var(--color-text);" onclick="PlannerModule.exportPDF(${plan.id})">PDF</button>
                     <button class="danger" style="padding:10px; border-radius:6px;" onclick="PlannerModule.deletePlan(${plan.id})">
                         <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:currentColor;"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2 2 0 0,0 8,21H16A2 2 0 0,0 18,19V7H6V19Z"/></svg>
                     </button>

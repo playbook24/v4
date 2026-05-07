@@ -30,6 +30,7 @@ const RosterModule = {
         
         // NOUVEAUX BOUTONS
         document.getElementById('btn-edit-team').onclick = () => this.editTeam();
+        document.getElementById('btn-archive-team').onclick = () => this.archiveTeam();
         document.getElementById('btn-delete-team').onclick = () => this.deleteTeam();
     },
 
@@ -57,10 +58,30 @@ const RosterModule = {
         const newName = prompt("Nouveau nom pour l'équipe :", current.name);
         if (newName && newName.trim() !== '') {
             try {
-                await orbDB.saveTeam({ id: this.currentTeamId, name: newName.trim() });
+                current.name = newName.trim();
+                await orbDB.saveTeam(current);
                 await this.loadTeams();
             } catch (error) {
                 alert("Erreur lors de la modification de l'équipe.");
+            }
+        }
+    },
+
+    // NOUVELLE FONCTION : Archiver l'équipe
+    async archiveTeam() {
+        if (!this.currentTeamId) return alert("Aucune équipe sélectionnée.");
+        if (confirm("Archiver cette équipe ? Elle n'apparaîtra plus ici ni dans le calendrier, mais restera accessible dans l'Archive.")) {
+            try {
+                const teams = await orbDB.getAllTeams();
+                const current = teams.find(t => t.id === this.currentTeamId);
+                if (current) {
+                    current.archived = true;
+                    await orbDB.saveTeam(current);
+                    this.currentTeamId = null;
+                    await this.loadTeams();
+                }
+            } catch (error) {
+                alert("Erreur lors de l'archivage.");
             }
         }
     },
@@ -76,7 +97,9 @@ const RosterModule = {
     },
 
     async loadTeams() {
-        const teams = await orbDB.getAllTeams();
+        let teams = await orbDB.getAllTeams();
+        teams = teams.filter(t => t.archived !== true); // Ne pas afficher les équipes archivées
+        
         this.teamSelect.innerHTML = '';
         if (teams.length === 0) {
             const defaultId = await orbDB.saveTeam({ name: 'Équipe 1' });
